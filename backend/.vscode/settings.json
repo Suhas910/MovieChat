@@ -1,0 +1,28 @@
+{
+  "editor.inlineSuggest.enabled": false,
+  "editor.quickSuggestions": {
+    "other": "off",
+    "comments": "off",
+    "strings": "off"
+  },
+  "editor.suggestOnTriggerCharacters": false,
+  "editor.parameterHints.enabled": false,
+  "editor.wordBasedSuggestions": "off",
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.snippetSuggestions": "none",
+  "editor.hover.enabled": false,
+
+  "google.gemini.inlineSuggestions.enableAuto": "off",
+  "google.gemini.nextEditPredictions.enabled": false,
+  "google.gemini.enableCodeCompletion": false,
+  "geminicodeassist.inlineSuggestions.enableAuto": "off",
+  "geminicodeassist.nextEditPredictions.enabled": false,
+
+  "chat.disableAIFeatures": true,
+  "github.copilot.enable": {
+    "*": false
+  },
+  "github.copilot.inlineSuggest.enable": false,
+  "github.copilot.nextEditSuggestions.enabled": false,
+  "terminal.integrated.suggest.enabled": false
+}
