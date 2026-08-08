@@ -1,5 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from app.tmdb_service import get_popular_movies, search_movie
+from app.database import get_db, engine, SessionLocal
+from app.models import Base
+
+
+Base.metadata.create_all(bind=engine)
+
 
 
 app = FastAPI()
