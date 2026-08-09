@@ -9,6 +9,7 @@ class User(Base):
 
     user_id = Column(Integer, primary_key=True)
     username = Column(String(20), unique=True, nullable=False)
+    hashed_password = Column(String)
     email = Column(String(30), unique=True, nullable=False)
 
     ratings = relationship("Rating", back_populates="user", cascade="all, delete-orphan")
