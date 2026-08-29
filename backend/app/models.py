@@ -1,84 +1,67 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
+from .database import Base
 
-Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
 
-    user_id = Column(Integer, primary_key=True)
-    username = Column(String(20), unique=True, nullable=False)
+    user_id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    email = Column(String(30), unique=True, nullable=False)
-
-    ratings = relationship("Rating", back_populates="user", cascade="all, delete-orphan")
-    reviews = relationship("Review", back_populates="user", cascade="all, delete-orphan")
-
-class Movie(Base):
-    __tablename__ = "movies"
-
-    movie_id = Column(Integer, primary_key=True)
-    title = Column(String(50), nullable=False)
-    description = Column(Text)
-    release_date = Column(DateTime)
-
-    ratings = relationship("Rating", back_populates="movie", cascade="all, delete-orphan")
-    reviews = relationship("Review", back_populates="movie", cascade="all, delete-orphan")
-
-#Rating of a movie given by user ( 1 to 5 )
-class Rating(Base):
-    __tablename__ = "ratings"
-
-    __table_args__ = (
-        CheckConstraint("rating >= 1 AND rating <= 5", name='check_rating_range'),
-    )
-
-    rating_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
-    movie_id = Column(Integer, ForeignKey("movies.movie_id"))
-    rating = Column(Integer)
-
-    #relationship
-    user = relationship("User", back_populates="ratings")
-    movie = relationship("Movie", back_populates="ratings")
-
-
-
-class Review(Base):
-    __tablename__ = "reviews"
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "movie_id", "group_id", name="unique_review_per_user_movie_group"),
-    )
-
-    review_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
-    movie_id = Column(Integer, ForeignKey("movies.movie_id"))
-    review_text = Column(String(500))
-
-    user = relationship("User", back_populates="reviews")
-    movie = relationship("Movie", back_populates="reviews")
 
 class Group(Base):
     __tablename__ = "groups"
 
-    group_id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True, nullable=False)
-    description = Column(String(200))
+    group_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
     created_by = Column(Integer, ForeignKey("users.user_id"))
 
-    members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
-
 class GroupMember(Base):
-    __tablename__ = "group_members"
+    __tablename__ = "groupmember"
 
-    id = Column(Integer, primary_key=True)
-    group_id = Column(Integer, ForeignKey("groups.group_id"))
+    group_member_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.user_id"))
+    group_id = Column(Integer, ForeignKey("groups.group_id"))
 
-    group = relationship("Group", back_populates="members")
-    user = relationship("User")
+class Movie(Base):
+    __tablename__ = "movies"
+
+    movie_id = Column(Integer, primary_key=True, index=True)
+    tmdb_id = Column(Integer, unique=True, index=True)
+    title = Column(String, index=True)
+    poster_url = Column(String)
+    desc = Column(String)
+    release_year = Column(String)
+    created_at = Column(DateTime, default= datetime.now(timezone.utc))
+
+    group_id = Column(Integer, ForeignKey("groups.group_id"))
+    added_by =  Column(Integer, ForeignKey("users.user_id"))
+
+class Rating(Base):
+    __tablename__ = "ratings"
+
+    user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)
+    movie_id = Column(Integer, ForeignKey("movies.movie_id"), primary_key=True)
+    group_id = Column(Integer, ForeignKey("groups.group_id"), primary_key=True)
+    rating = Column(Integer) # 1 to 10
+
+class Review(Base):
+    __tablename__ = "reviews"
+
+    review_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"))
+    movie_id = Column(Integer, ForeignKey("movies.movie_id"))
+    group_id = Column(Integer, ForeignKey("groups.group_id"))
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.now())
+
+
+
+
+
 
 
 

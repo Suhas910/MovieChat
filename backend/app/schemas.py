@@ -1,13 +1,17 @@
 from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
 from datetime import datetime
-from typing import list , Optional
+from typing import Optional
 
 # Authentication 
 
-class UserCreate(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
+class UserRegister(BaseModel):
+    username : str
+    email : EmailStr
+    password : str
+
+class UserLogin(BaseModel):
+    username : str
+    password : str
 
 class UserResponse(BaseModel):
     id:int
@@ -17,11 +21,7 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class LoginRequest(BaseModel):
-    username: EmailStr
-    password: str
-
-class TokenResponse(BaseModel):
+class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
@@ -29,20 +29,26 @@ class TokenResponse(BaseModel):
 
 class GroupCreate(BaseModel):
     name: str
-    description: Optional[str] = None
 
 class GroupResponse(BaseModel):
-    id: int
+    group_id: int
     name: str
-    description: Optional[str] = None
-    created_by : UserResponse
-    members: list[UserResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config={"from_attributes": True}
 
-class GroupInvite(BaseModel):
-    username: str
+# ── GroupMember ───────────────────────────────────────────────────────────────
+
+class GroupMemberCreate(BaseModel):
+    user_id: int                     # who to add
+    group_id: int                    # which group
+
+
+class GroupMemberResponse(BaseModel):
+    user_id: int
+    group_id: int
+    joined_at: datetime
+
+    model_config = {"from_attributes": True}
 
 #Movie
 
@@ -90,34 +96,7 @@ class ReviewUpdate(BaseModel):
     rating: Optional[float] = None
     content: Optional[str] = None
 
-#comment
-class CommentCreate(BaseModel):
-    review_id: int
-    content: str
 
-class CommentResponse(BaseModel):
-    id: int
-    author: UserResponse
-    content: str
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-class UserCreate(BaseModel):
-    username : str
-    password : str
-
-class UserResponse(BaseModel):
-    id:int
-    username:str
-
-    class Config:
-        from_attributes = True
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
 
 
 

@@ -1,18 +1,58 @@
-from fastapi import FastAPI, HTTPException, Depends
-from app.tmdb_service import get_popular_movies, search_movie
-from app.database import get_db, engine, SessionLocal
-from app.models import Base
-from fastapi.security import OAuth2PasswordRequestForm
-from . import auth, schemas, models
+from fastapi import FastAPI, HTTPException
+from datetime import datetime, date
+from fastapi.middleware.cors import CORSMiddleware
+
+from .database import engine, Base, get_db
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
+from . import schemas
+
+from . import auth, models
+
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from . import tmdb_service
 
 
 Base.metadata.create_all(bind=engine)
 
-
-
 app = FastAPI()
 
-movie_posts = []
+security = HTTPBearer()
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    token = credentials.credentials  # extract token from header
+    payload = auth.verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = db.query(models.User).filter(models.User.username == payload["sub"]).first()
+    return user
+
+
+def verify_grp_membership(
+    group_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    membership = (
+        db.query(models.GroupMember)
+        .filter(
+            models.GroupMember.group_id == group_id,
+            models.GroupMember.user_id == current_user.user_id,
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(
+            status_code=403, detail="You are not a member of this group"
+        )
+    return current_user
 
 
 @app.get("/")
@@ -20,65 +60,119 @@ def hello_world():
     return {"Message": "Hello World"}
 
 
-@app.get("/popular_movies")
-def popular_movies():
-    data = get_popular_movies()
-    return data
+@app.post("/register")
+def register(user: schemas.UserRegister, db: Session = Depends(get_db)):
+    # check if username already exists
+    existing = (
+        db.query(models.User).filter(models.User.username == user.username).first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    new_user = models.User(
+        username=user.username,
+        email=user.email,
+        hashed_password=auth.hash_password(user.password),  # hash before saving
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
 
-@app.get("/movies/{query}")
-def search_movies(query: str):
-    data = search_movie(query)
+@app.post("/login")
+def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+    user = (
+        db.query(models.User)
+        .filter(models.User.username == credentials.username)
+        .first()
+    )
+
+    # check user exists and password matches
+    if not user or not auth.verify_password(credentials.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # generate token with user info inside
+    token = auth.create_token({"sub": user.username, "id": user.user_id})
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.post("/create_group")
+def create_group(
+    grp: schemas.GroupCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+
+    new_group = models.Group(name=grp.name, created_by=current_user.user_id)
+    db.add(new_group)
+    db.commit()
+    db.refresh(new_group)
+
+    grp_id = db.query(models.Group).filter(models.Group.name == grp.name).first()
+    grp_member = models.GroupMember(
+        user_id=current_user.user_id, group_id=grp_id.group_id
+    )
+    db.add(grp_member)
+    db.commit()
+    db.refresh(grp_member)
+
+    return new_group
+
+
+# yet to do
+@app.post("/add_grp_member")
+def add_grp_member(
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    admin = db.query(models.Group(created_by=current_user.user_id))
+    # if admin, send email and check or so
+
+
+@app.get("/groups/{group_id}/popular_movies")
+def popular_movies(
+    group_id: int, current_user: models.User = Depends(verify_grp_membership)
+):
+    pop_movies = tmdb_service.get_popular_movies()
+    return pop_movies
+
+
+@app.get("/groups/{group_id}/movies/{query}")
+def search_movies(
+    query: str, current_user: models.User = Depends(verify_grp_membership)
+):
+    data = tmdb_service.search_movie(query)
     if data is None:
         raise HTTPException(status_code=404, detail="Movie not found")
     else:
         first_item = data["results"][0]
         return first_item
 
-@app.post("/movies/{query}")
+
+@app.post("/groups/{group_id}/movies/{query}")
 def add_movie(
     query: str,
-    db: SessionLocal = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user)):
-    data = search_movie(query)
-    first_item = data["results"][0]
-    movie_posts.append(first_item)
-    return {"message": "Movie added successfully"}
-
-@app.post("/auth/register", response_model=schemas.UserResponse)
-def register(user: schemas.UserCreate, db: SessionLocal = Depends(get_db)):
-
-    # Check if user exists
-    existing = db.query(models.User).filter(models.User.username == user.username).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Username already taken")
-
-    # Create new user with hashed password
-    db_user = models.User(
-        username=user.username,
-        hashed_password=auth.hash_password(user.password)
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-@app.post("/auth/login", response_model=schemas.Token)
-def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: SessionLocal = Depends(get_db)
+    group_id: int,
+    current_user: models.User = Depends(verify_grp_membership),
+    db: Session = Depends(get_db),
 ):
-    user = db.query(models.User).filter(models.User.username == form_data.username).first()
-    
-    # Check password (if user doesn't exist, verify still works but returns False)
-    if not user or not auth.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid username or password"
-        )
+    data = tmdb_service.search_movie(query)
+    first_item = data["results"][0]
 
-    # Create token with user's ID
-    token = auth.create_access_token(data={"sub": str(user.id)})
-    return {"access_token": token, "token_type": "bearer"}
+    # should add this movie post in db
 
+    new_movie = models.Movie(
+        tmdb_id=first_item["id"],
+        title=first_item["title"],
+        poster_url=first_item["poster_path"],
+        desc=first_item["overview"],
+        release_year=first_item["release_date"],
+        group_id=group_id,
+        added_by=current_user.user_id,
+    )
+
+    db.add(new_movie)
+    db.commit()
+
+    return {"message": "Movie added successfully"}
 
