@@ -35,7 +35,7 @@ class Movie(Base):
     poster_url = Column(String)
     desc = Column(String)
     release_year = Column(String)
-    created_at = Column(DateTime, default= datetime.now(timezone.utc))
+    #created_at = Column(DateTime, default= datetime.now(timezone.utc))
 
     group_id = Column(Integer, ForeignKey("groups.group_id"))
     added_by =  Column(Integer, ForeignKey("users.user_id"))

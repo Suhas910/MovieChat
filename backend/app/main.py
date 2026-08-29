@@ -176,3 +176,19 @@ def add_movie(
 
     return {"message": "Movie added successfully"}
 
+
+@app.get("/groups/{group_id}/movies")
+def show_all_movies(
+    group_id: int,
+    current_user: models.User = Depends(verify_grp_membership),
+    db: Session = Depends(get_db),
+):
+    all_movies = (
+        db.query(models.Movie)
+        .filter(models.Movie.group_id == group_id)
+        .order_by(models.Movie.movie_id.desc())
+        .all()
+    )
+
+    return all_movies
+
