@@ -192,3 +192,45 @@ def show_all_movies(
 
     return all_movies
 
+
+@app.post("/groups/{group_id}/movies/{movie_id}/add-rating")
+def add_rating(
+    group_id: int,
+    movie_id: int,
+    user_rating: schemas.RatingCreate,
+    current_user: models.User = Depends(verify_grp_membership),
+    db: Session = Depends(get_db),
+):
+    new_rating = models.Rating(
+        user_id=current_user.user_id,
+        movie_id=movie_id,
+        group_id=group_id,
+        rating=user_rating.rating,
+    )
+
+    db.add(new_rating)
+    db.commit()
+
+    return {"rating added successfully"}
+
+
+@app.post("/groups/{group_id}/movies/{movie_id}/add-review")
+def add_review(
+    group_id: int,
+    movie_id: int,
+    user_review: str,
+    current_user: models.User = Depends(verify_grp_membership),
+    db: Session = Depends(get_db),
+):
+    new_review = models.Review(
+        user_id=current_user.user_id,
+        movie_id=movie_id,
+        group_id=group_id,
+        content=user_review,
+    )
+
+    db.add(new_review)
+    db.commit()
+
+    return {"rating added successfully"}
+

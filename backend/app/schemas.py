@@ -97,6 +97,9 @@ class ReviewUpdate(BaseModel):
     content: Optional[str] = None
 
 
+#Rating
+class RatingCreate(BaseModel):
+    rating: int = Field(ge=1, le=10)
 
 
 

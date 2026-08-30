@@ -56,7 +56,7 @@ class Review(Base):
     movie_id = Column(Integer, ForeignKey("movies.movie_id"))
     group_id = Column(Integer, ForeignKey("groups.group_id"))
     content = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.now())
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
 
 
