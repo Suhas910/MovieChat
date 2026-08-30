@@ -19,6 +19,19 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 security = HTTPBearer()
 
 
@@ -121,12 +134,52 @@ def create_group(
 
 
 # yet to do
-@app.post("/add_grp_member")
-def add_grp_member(
-    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
+@app.post("/groups/{group_id}/add-member")
+def add_member(
+    group_id: int,
+    username: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    admin = db.query(models.Group(created_by=current_user.user_id))
-    # if admin, send email and check or so
+    admin = db.query(models.Group).filter(models.Group.group_id == group_id).first()
+
+    if current_user.user_id == admin.created_by:
+        # check if a user with this specific username exists
+        user = db.query(models.User).filter(models.User.username == username).first()
+
+        if user:
+            # user with this username exists, add user to this grp
+            add_member = models.GroupMember(user_id=user.user_id, group_id=group_id)
+            db.add(add_member)
+            db.commit()
+        else:
+            raise HTTPException(status_code=404, detail="Username not found")
+
+    else:
+        raise HTTPException(status_code=401, detail="Unauthorised")
+
+    return {"user added"}
+
+
+# all groups user is in
+@app.get("/my_groups")
+def my_groups(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    all_groups_id = (
+        db.query(models.GroupMember)
+        .filter(models.GroupMember.user_id == current_user.user_id)
+        .all()
+    )
+    all_groups_names = []
+    for id in all_groups_id:
+        grp_id = id.group_id
+        grp_name = (
+            db.query(models.Group).filter(models.Group.group_id == grp_id).first()
+        )
+        all_groups_names.append(grp_name.name)
+    return all_groups_names
 
 
 @app.get("/groups/{group_id}/popular_movies")
@@ -234,3 +287,27 @@ def add_review(
 
     return {"rating added successfully"}
 
+
+@app.get("/groups/{group_id}/movies/{movie_id}/rating&review")
+def rating_review(
+    group_id: int,
+    movie_id: int,
+    current_user: models.User = Depends(verify_grp_membership),
+    db: Session = Depends(get_db),
+):
+    all_ratings = (
+        db.query(models.Rating)
+        .filter(models.Rating.group_id == group_id, models.Rating.movie_id == movie_id)
+        .all()
+    )
+
+    all_reviews = (
+        db.query(models.Review)
+        .filter(models.Review.group_id == group_id, models.Review.movie_id == movie_id)
+        .all()
+    )
+
+    return {
+        "ratings": all_ratings,
+        "reviews": all_reviews,
+    }
