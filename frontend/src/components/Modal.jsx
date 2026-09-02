@@ -10,7 +10,12 @@ export default function Modal({ isOpen, onClose, title, children, id = 'modal' }
       <div className="modal-box" id={`${id}-box`}>
         <div className="modal-header">
           <h3>{title}</h3>
-          <button className="modal-close" onClick={onClose} id={`${id}-close-btn`} aria-label="Close">
+          <button
+            className="modal-close"
+            onClick={onClose}
+            id={`${id}-close-btn`}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>

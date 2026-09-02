@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w500';
-const TMDB_IMG_SM = 'https://image.tmdb.org/t/p/w185';
 
 export default function GroupDetail() {
   const { groupId } = useParams();
@@ -173,7 +172,7 @@ export default function GroupDetail() {
     setAddingMember(true);
     try {
       await api.addMember(groupId, memberUsername.trim(), token);
-      setMemberMsg(`✓ "${memberUsername}" has been added to the group!`);
+      setMemberMsg(`"${memberUsername}" has been added to the group!`);
       setMemberUsername('');
     } catch (err) {
       setMemberError(err.message);
@@ -188,23 +187,25 @@ export default function GroupDetail() {
     <div className="page fade-in">
 
       {/* Back link */}
-      <Link to="/groups" id="back-to-groups" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', fontSize: 14, marginBottom: 20, transition: 'color 0.2s' }}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-      >
-        ← Back to groups
+      <Link to="/groups" id="back-to-groups" className="back-link">
+        ← All groups
       </Link>
 
       {/* ── Group Header ── */}
-      <div className="hero-gradient" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
+      <div className="group-header">
         <div>
-          <h1 style={{ marginBottom: 6 }}>🎬 Group #{groupId}</h1>
-          <p style={{ color: 'var(--text-muted)' }}>
-            Search movies, add them to the group, then rate and review together.
-          </p>
+          <div className="group-header-title-row">
+            <h1>Film Club</h1>
+            <span className="group-header-num">#{groupId}</span>
+          </div>
+          <p>Search movies, add them to the group, then rate and review together.</p>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => { setMemberOpen(true); setMemberMsg(''); setMemberError(''); }} id="open-add-member-btn">
-          👥 Add Member
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => { setMemberOpen(true); setMemberMsg(''); setMemberError(''); }}
+          id="open-add-member-btn"
+        >
+          Add Member
         </button>
       </div>
 
@@ -212,29 +213,27 @@ export default function GroupDetail() {
       <div className="section">
         <div className="section-header">
           <div className="section-title">
-            <span className="icon">🔍</span>
-            <h2>Find & Add a Movie</h2>
+            <h2>Find a Movie</h2>
           </div>
         </div>
 
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 10, marginBottom: 16 }} id="search-form">
+        <form onSubmit={handleSearch} className="search-row" style={{ marginBottom: 16 }} id="search-form">
           <input
             id="search-input"
             type="text"
             className="form-input"
-            placeholder="e.g. The Dark Knight, Inception, Interstellar..."
+            placeholder="The Dark Knight, Inception, Interstellar…"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            style={{ flex: 1, maxWidth: 480 }}
           />
           <button type="submit" className="btn btn-primary" disabled={searching || !query.trim()} id="search-btn">
-            {searching ? <><div className="spinner spinner-sm" /> Searching...</> : '🔍 Search'}
+            {searching ? <><div className="spinner spinner-sm" /> Searching...</> : 'Search'}
           </button>
         </form>
 
         {/* Status messages */}
-        {searchError && <div className="alert alert-error" style={{ marginBottom: 12 }} id="search-error">⚠ {searchError}</div>}
-        {addMsg && <div className="alert alert-success" style={{ marginBottom: 12 }} id="add-msg">🎉 {addMsg}</div>}
+        {searchError && <div className="alert alert-error" style={{ marginBottom: 12 }} id="search-error">{searchError}</div>}
+        {addMsg && <div className="alert alert-success" style={{ marginBottom: 12 }} id="add-msg">{addMsg}</div>}
 
         {/* Search result card */}
         {searchResult && (
@@ -250,29 +249,37 @@ export default function GroupDetail() {
       {/* ── Tabs: Group Movies / Popular ── */}
       <div className="section">
         <div className="tabs">
-          <button className={`tab ${tab === 'movies' ? 'active' : ''}`} onClick={() => setTab('movies')} id="tab-movies">
-            🎬 Group Movies {!moviesLoading && `(${groupMovies.length})`}
+          <button
+            className={`tab ${tab === 'movies' ? 'active' : ''}`}
+            onClick={() => setTab('movies')}
+            id="tab-movies"
+          >
+            Group Movies {!moviesLoading && `(${groupMovies.length})`}
           </button>
-          <button className={`tab ${tab === 'popular' ? 'active' : ''}`} onClick={() => setTab('popular')} id="tab-popular">
-            🔥 Popular Now
+          <button
+            className={`tab ${tab === 'popular' ? 'active' : ''}`}
+            onClick={() => setTab('popular')}
+            id="tab-popular"
+          >
+            Popular Now
           </button>
         </div>
 
         {/* ── GROUP MOVIES ── */}
         {tab === 'movies' && (
           <>
-            {moviesError && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠ {moviesError}</div>}
+            {moviesError && <div className="alert alert-error" style={{ marginBottom: 16 }}>{moviesError}</div>}
 
             {moviesLoading ? (
               <div className="grid-cards">
-                {[1,2,3,4,5,6].map(i => (
-                  <div key={i} className="skeleton" style={{ aspectRatio: '2/3.5', borderRadius: 'var(--radius-lg)' }} />
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                  <div key={i} className="skeleton" style={{ aspectRatio: '2/3.2', borderRadius: 'var(--radius-sm)' }} />
                 ))}
               </div>
             ) : groupMovies.length === 0 ? (
-              <div className="card" style={{ padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
-                <span style={{ fontSize: 48 }}>🍿</span>
-                <h3 style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>No movies yet</h3>
+              <div className="empty-groups-card">
+                <span className="empty-icon">🍿</span>
+                <h3>No movies yet</h3>
                 <p>Search for a movie above or browse popular movies to add one to the group.</p>
               </div>
             ) : (
@@ -295,16 +302,16 @@ export default function GroupDetail() {
         {/* ── POPULAR MOVIES ── */}
         {tab === 'popular' && (
           <>
-            {addMsg && <div className="alert alert-success" style={{ marginBottom: 16 }}>🎉 {addMsg}</div>}
+            {addMsg && <div className="alert alert-success" style={{ marginBottom: 16 }}>{addMsg}</div>}
             {popularLoading ? (
               <div className="grid-cards">
-                {[1,2,3,4,5,6,7,8].map(i => (
-                  <div key={i} className="skeleton" style={{ aspectRatio: '2/3.5', borderRadius: 'var(--radius-lg)' }} />
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                  <div key={i} className="skeleton" style={{ aspectRatio: '2/3.2', borderRadius: 'var(--radius-sm)' }} />
                 ))}
               </div>
             ) : popular.length === 0 ? (
               <div className="empty-state">
-                <span style={{ fontSize: 40 }}>📡</span>
+                <span className="icon">📡</span>
                 <p>Couldn't load popular movies.</p>
               </div>
             ) : (
@@ -319,10 +326,10 @@ export default function GroupDetail() {
       </div>
 
       {/* ── Add Member Modal ── */}
-      <Modal isOpen={memberOpen} onClose={() => setMemberOpen(false)} title="👥 Add Member" id="add-member-modal">
+      <Modal isOpen={memberOpen} onClose={() => setMemberOpen(false)} title="Add Member" id="add-member-modal">
         <form onSubmit={handleAddMember} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="form-group">
-            <label className="form-label" htmlFor="member-input">Username to add</label>
+            <label className="form-label" htmlFor="member-input">Username</label>
             <input
               id="member-input"
               type="text"
@@ -334,10 +341,10 @@ export default function GroupDetail() {
               autoFocus
             />
           </div>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: -8 }}>
-            ⚠ Only the group creator (admin) can add members.
+          <p style={{ fontSize: 13, color: 'var(--fog)', marginTop: -8 }}>
+            Only the group creator can add members.
           </p>
-          {memberError && <div className="alert alert-error" id="member-error">⚠ {memberError}</div>}
+          {memberError && <div className="alert alert-error" id="member-error">{memberError}</div>}
           {memberMsg && <div className="alert alert-success" id="member-success">{memberMsg}</div>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-ghost" onClick={() => setMemberOpen(false)} id="member-cancel">Cancel</button>
@@ -357,29 +364,29 @@ function SearchResultCard({ movie, onAdd, onDismiss, adding }) {
   const year = (movie.release_date || '').slice(0, 4);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 0, background: 'var(--bg-card)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', maxWidth: 580 }} className="fade-in" id="search-result-card">
-      <div style={{ background: 'var(--bg-raised)', minHeight: 200 }}>
+    <div className="search-result-card fade-in" id="search-result-card">
+      <div className="search-result-poster">
         {poster
-          ? <img src={poster} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>🎬</div>
+          ? <img src={poster} alt={movie.title} />
+          : <div className="search-result-poster-fallback">🎬</div>
         }
       </div>
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 12 }}>
+      <div className="search-result-body">
         <div>
-          <h3 style={{ marginBottom: 4, fontSize: 16 }}>{movie.title}</h3>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+          <h3 className="search-result-title">{movie.title}</h3>
+          <div className="search-result-meta">
             {year && <span className="badge badge-accent">{year}</span>}
-            {movie.vote_average > 0 && <span className="badge badge-success">⭐ {movie.vote_average.toFixed(1)}</span>}
+            {movie.vote_average > 0 && (
+              <span className="badge badge-success">{movie.vote_average.toFixed(1)} TMDB</span>
+            )}
           </div>
           {movie.overview && (
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-              {movie.overview}
-            </p>
+            <p className="search-result-overview">{movie.overview}</p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="search-result-actions">
           <button className="btn btn-primary btn-sm" onClick={onAdd} disabled={adding} id="confirm-add-btn">
-            {adding ? <><div className="spinner spinner-sm" /> Adding...</> : '+ Add to Group'}
+            {adding ? <><div className="spinner spinner-sm" /> Adding...</> : 'Add to Group'}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={onDismiss} id="dismiss-result-btn">Dismiss</button>
         </div>
@@ -399,6 +406,10 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
     ? (feedback.ratings.reduce((s, r) => s + r.rating, 0) / feedback.ratings.length).toFixed(1)
     : null;
 
+  // Ticket badge: 3-segment compact strip
+  const avg = avgRating ? parseFloat(avgRating) : 0;
+  const ticketFilled = avg >= 7 ? 3 : avg >= 4 ? 2 : avg > 0 ? 1 : 0;
+
   function handleToggle() {
     if (!expanded) onExpand();
     setExpanded(v => !v);
@@ -417,17 +428,26 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
       {/* Info */}
       <div className="movie-info">
         <div className="movie-title" title={movie.title}>{movie.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+        <div className="movie-info-row">
           <span className="movie-year">{year || '—'}</span>
-          {avgRating && <span className="movie-rating-badge">⭐ {avgRating}</span>}
+          {avgRating && (
+            <span className="movie-rating-badge">
+              <span className="ticket-strip-sm" aria-hidden="true">
+                {[1, 2, 3].map(n => (
+                  <span key={n} className={`ticket-seg-sm ${n <= ticketFilled ? 'filled' : ''}`} />
+                ))}
+              </span>
+              {avgRating}
+            </span>
+          )}
         </div>
         <button
           className="btn btn-ghost btn-sm"
-          style={{ width: '100%', fontSize: 12, marginTop: 10 }}
+          style={{ width: '100%', fontSize: 12, marginTop: 8 }}
           onClick={handleToggle}
           id={`toggle-${movie.movie_id}`}
         >
-          {expanded ? '▲ Collapse' : '▼ Rate & Review'}
+          {expanded ? 'Collapse' : 'Rate & Review'}
         </button>
       </div>
 
@@ -454,16 +474,20 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
               {/* Ratings summary */}
               {feedback.ratings.length > 0 && (
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  <div className="panel-section-label">
                     Group Ratings ({feedback.ratings.length})
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {feedback.ratings.map((r, i) => (
-                      <span key={i} className="badge badge-accent">⭐ {r.rating}/10</span>
+                      <span key={i} className="badge badge-accent">{r.rating}/10</span>
                     ))}
                   </div>
-                  <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
-                    Average: <strong style={{ color: 'var(--accent)' }}>{(feedback.ratings.reduce((s, r) => s + r.rating, 0) / feedback.ratings.length).toFixed(1)}</strong>/10
+                  <div style={{ marginTop: 6, fontSize: 13, color: 'var(--silver)' }}>
+                    Average:{' '}
+                    <span style={{ color: 'var(--amber)', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
+                      {(feedback.ratings.reduce((s, r) => s + r.rating, 0) / feedback.ratings.length).toFixed(1)}
+                    </span>
+                    {' '}/ 10
                   </div>
                 </div>
               )}
@@ -471,7 +495,7 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
               {/* Reviews */}
               {feedback.reviews.length > 0 && (
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  <div className="panel-section-label">
                     Reviews ({feedback.reviews.length})
                   </div>
                   {feedback.reviews.map((rev, i) => (
@@ -479,7 +503,7 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
                       <div className="review-header">
                         <span className="review-author">User #{rev.user_id}</span>
                         {rev.created_at && (
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          <span className="review-date">
                             {new Date(rev.created_at).toLocaleDateString()}
                           </span>
                         )}
@@ -491,8 +515,8 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
               )}
 
               {feedback.ratings.length === 0 && feedback.reviews.length === 0 && (
-                <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', paddingTop: 12 }}>
-                  Be the first to rate or review this movie!
+                <p style={{ fontSize: 13, color: 'var(--fog)', textAlign: 'center', paddingTop: 12 }}>
+                  Be the first to rate or review this movie.
                 </p>
               )}
             </>
@@ -517,42 +541,33 @@ function RateSection({ movieId, onRate }) {
 
   return (
     <div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-        Rate this movie (1–10)
-      </div>
+      <div className="panel-section-label">Rate this movie (1–10)</div>
       {submitted ? (
-        <div className="alert alert-success" style={{ fontSize: 13 }}>✓ Rating saved!</div>
+        <div className="alert alert-success" style={{ fontSize: 13 }}>Rating saved!</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-            {[1,2,3,4,5,6,7,8,9,10].map(n => (
+          <div className="rating-input-row">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
               <button
                 key={n}
+                type="button"
+                className={`rating-seg-btn ${selected >= n ? 'active' : ''}`}
                 onClick={() => setSelected(n)}
-                style={{
-                  width: 26, height: 26, borderRadius: '50%', border: '2px solid',
-                  borderColor: selected >= n ? 'var(--accent)' : 'var(--border)',
-                  background: selected >= n ? 'var(--accent)' : 'var(--bg-raised)',
-                  color: selected >= n ? '#0a0a0a' : 'var(--text-muted)',
-                  fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                  transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
                 title={`${n}/10`}
+                aria-label={`Rate ${n} out of 10`}
                 id={`rate-${movieId}-${n}`}
               >
                 {n}
               </button>
             ))}
             {selected > 0 && (
-              <span style={{ marginLeft: 6, fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>
-                {selected}/10
-              </span>
+              <span className="rating-value-label">{selected} / 10</span>
             )}
           </div>
           {selected > 0 && (
             <button
               className="btn btn-primary btn-sm"
-              style={{ width: 'fit-content', fontSize: 12, padding: '5px 14px' }}
+              style={{ width: 'fit-content' }}
               onClick={submit}
               id={`submit-rate-${movieId}`}
             >
@@ -581,23 +596,26 @@ function ReviewSection({ movieId, onReview }) {
 
   return (
     <div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-        Write a review
-      </div>
+      <div className="panel-section-label">Write a review</div>
       {submitted ? (
-        <div className="alert alert-success" style={{ fontSize: 13 }}>✓ Review posted!</div>
+        <div className="alert alert-success" style={{ fontSize: 13 }}>Review posted!</div>
       ) : (
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <textarea
             className="form-input"
-            placeholder="Share your thoughts on this movie..."
+            placeholder="Share your thoughts on this movie…"
             value={text}
             onChange={e => setText(e.target.value)}
             style={{ minHeight: 68, fontSize: 13 }}
             id={`review-input-${movieId}`}
           />
           {text.trim() && (
-            <button type="submit" className="btn btn-primary btn-sm" style={{ width: 'fit-content', fontSize: 12, padding: '5px 14px' }} id={`submit-review-${movieId}`}>
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm"
+              style={{ width: 'fit-content' }}
+              id={`submit-review-${movieId}`}
+            >
               Post Review
             </button>
           )}
@@ -630,7 +648,7 @@ function PopularMovieCard({ movie, onAdd }) {
         }
         <div className="movie-poster-overlay">
           {done ? (
-            <span className="badge badge-success" style={{ width: '100%', justifyContent: 'center' }}>✓ Added</span>
+            <span className="badge badge-success" style={{ width: '100%', justifyContent: 'center' }}>Added</span>
           ) : (
             <button
               className="btn btn-primary btn-sm"
@@ -639,16 +657,18 @@ function PopularMovieCard({ movie, onAdd }) {
               disabled={adding}
               id={`add-popular-${movie.id}`}
             >
-              {adding ? <div className="spinner spinner-sm" /> : '+ Add to Group'}
+              {adding ? <div className="spinner spinner-sm" /> : 'Add to Group'}
             </button>
           )}
         </div>
       </div>
       <div className="movie-info">
         <div className="movie-title" title={movie.title}>{movie.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+        <div className="movie-info-row">
           <span className="movie-year">{year}</span>
-          {movie.vote_average > 0 && <span className="movie-rating-badge">⭐ {movie.vote_average.toFixed(1)}</span>}
+          {movie.vote_average > 0 && (
+            <span style={{ fontSize: 12, color: 'var(--fog)' }}>{movie.vote_average.toFixed(1)}</span>
+          )}
         </div>
       </div>
     </div>

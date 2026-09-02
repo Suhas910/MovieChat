@@ -16,14 +16,14 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-inner">
         <Link to="/groups" className="navbar-logo" id="nav-logo">
-          <span className="logo-icon">🎬</span>
-          <span className="logo-text">Movie<span>Chat</span></span>
+          <span className="navbar-logo-mark">🎬</span>
+          <span className="navbar-logo-text">MovieChat</span>
         </Link>
 
         <div className="navbar-right">
           {username && (
             <span className="navbar-username" id="nav-username">
-              👤 {username}
+              {username}
             </span>
           )}
           <button

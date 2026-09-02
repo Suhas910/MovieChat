@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
+// Generate filmstrip holes for the decorative panel
+const HOLE_COUNT = 28;
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -28,70 +31,88 @@ export default function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <span className="logo-icon">🎬</span>
-          <span className="logo-text">Movie<span>Chat</span></span>
+      {/* Left: cinematic panel */}
+      <div className="auth-cinema-panel">
+        <div className="auth-filmstrip">
+          {Array.from({ length: HOLE_COUNT }).map((_, i) => (
+            <div key={i} className="auth-filmstrip-hole" />
+          ))}
         </div>
 
-        <h1 className="auth-title" style={{ fontSize: 26 }}>Welcome back</h1>
-        <p className="auth-subtitle">Sign in to your account to continue</p>
+        <div className="auth-panel-content">
+          <p className="auth-panel-quote">
+            "Cinema is a mirror by which we often see ourselves."
+          </p>
+          <p className="auth-panel-attr">— Wim Wenders</p>
+        </div>
+      </div>
 
-        <form className="auth-form" onSubmit={handleSubmit} id="login-form">
-          <div className="form-group">
-            <label className="form-label" htmlFor="login-username">Username</label>
-            <input
-              id="login-username"
-              type="text"
-              className="form-input"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              autoFocus
-            />
+      {/* Right: form panel */}
+      <div className="auth-form-panel">
+        <div className="auth-card">
+          <div className="auth-logo">
+            <span className="auth-logo-icon">🎬</span>
+            <span className="auth-logo-text">MovieChat</span>
           </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="login-password">Password</label>
-            <input
-              id="login-password"
-              type="password"
-              className="form-input"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          <h1 className="auth-heading" style={{ fontSize: 28 }}>Welcome back</h1>
+          <p className="auth-subheading">Sign in to your account to continue</p>
 
-          {error && (
-            <div className="alert alert-error" id="login-error">
-              ⚠ {error}
+          <form className="auth-form" onSubmit={handleSubmit} id="login-form">
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-username">Username</label>
+              <input
+                id="login-username"
+                type="text"
+                className="form-input"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoFocus
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            className="btn btn-primary btn-lg btn-block"
-            disabled={loading}
-            id="login-submit-btn"
-            style={{ marginTop: 4 }}
-          >
-            {loading ? (
-              <>
-                <div className="spinner spinner-sm" />
-                Signing in...
-              </>
-            ) : (
-              'Sign In'
+            <div className="form-group">
+              <label className="form-label" htmlFor="login-password">Password</label>
+              <input
+                id="login-password"
+                type="password"
+                className="form-input"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="alert alert-error" id="login-error">
+                {error}
+              </div>
             )}
-          </button>
-        </form>
 
-        <div className="auth-footer">
-          Don't have an account?{' '}
-          <Link to="/register" id="login-register-link">Create one</Link>
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg btn-block"
+              disabled={loading}
+              id="login-submit-btn"
+            >
+              {loading ? (
+                <>
+                  <div className="spinner spinner-sm" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+
+          <div className="auth-footer">
+            Don't have an account?{' '}
+            <Link to="/register" id="login-register-link">Create one</Link>
+          </div>
         </div>
       </div>
     </div>

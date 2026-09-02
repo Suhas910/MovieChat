@@ -68,26 +68,24 @@ export default function GroupsList() {
   return (
     <>
       <div className="page fade-in">
-        {/* Hero header */}
-        <div className="hero-gradient" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
+        {/* Page header */}
+        <div className="groups-hero">
           <div>
-            <h1 style={{ marginBottom: 6 }}>Hey, {username || 'there'} 👋</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 16 }}>
-              Your movie groups — rate and review films together with friends.
-            </p>
+            <h1>Hey, {username || 'there'}</h1>
+            <p>Your movie groups — rate and review films together with friends.</p>
           </div>
           <button
             className="btn btn-primary"
             onClick={() => setCreateOpen(true)}
             id="create-group-open-btn"
           >
-            + New Group
+            New Group
           </button>
         </div>
 
         {error && (
           <div className="alert alert-error" style={{ marginBottom: 24 }} id="groups-error">
-            ⚠ {error}
+            {error}
           </div>
         )}
 
@@ -95,12 +93,11 @@ export default function GroupsList() {
         <div className="section">
           <div className="section-header">
             <div className="section-title">
-              <span className="icon">🎬</span>
               <h2>My Groups</h2>
             </div>
             {!loading && (
-              <span className="badge badge-accent">
-                {groups.length} group{groups.length !== 1 ? 's' : ''}
+              <span className="badge badge-velvet">
+                {groups.length} {groups.length !== 1 ? 'groups' : 'group'}
               </span>
             )}
           </div>
@@ -108,15 +105,19 @@ export default function GroupsList() {
           {loading ? (
             <div className="grid-groups">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="skeleton" style={{ height: 130, borderRadius: 'var(--radius-lg)' }} />
+                <div key={i} className="skeleton" style={{ height: 110, borderRadius: 'var(--radius-md)' }} />
               ))}
             </div>
           ) : groups.length === 0 ? (
-            <div className="card" style={{ padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
-              <span style={{ fontSize: 48 }}>🎪</span>
-              <h3 style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>No groups yet</h3>
+            <div className="empty-groups-card">
+              <span className="empty-icon">🎪</span>
+              <h3>No groups yet</h3>
               <p>Create your first group to start watching and rating movies with friends.</p>
-              <button className="btn btn-primary" onClick={() => setCreateOpen(true)} id="empty-create-btn" style={{ marginTop: 8 }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => setCreateOpen(true)}
+                id="empty-create-btn"
+              >
                 Create a Group
               </button>
             </div>
@@ -134,7 +135,7 @@ export default function GroupsList() {
       <Modal
         isOpen={createOpen}
         onClose={() => { setCreateOpen(false); setCreateError(''); setNewGroupName(''); }}
-        title="Create a New Group"
+        title="New Group"
         id="create-group-modal"
       >
         <form onSubmit={handleCreateGroup} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -153,7 +154,7 @@ export default function GroupsList() {
           </div>
 
           {createError && (
-            <div className="alert alert-error" id="create-group-error">⚠ {createError}</div>
+            <div className="alert alert-error" id="create-group-error">{createError}</div>
           )}
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
@@ -180,7 +181,7 @@ function GroupCard({ group }) {
     >
       <span className="group-card-icon">{icon}</span>
       <div className="group-card-name">{group.name}</div>
-      <div className="group-card-meta">Group #{group.group_id} · Click to explore →</div>
+      <div className="group-card-meta">Group #{group.group_id}</div>
     </Link>
   );
 }

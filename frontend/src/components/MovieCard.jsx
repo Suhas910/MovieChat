@@ -2,6 +2,50 @@ import { useState } from 'react';
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w500';
 
+// ── Ticket Strip helpers ──────────────────────────────────────────────────────
+// The signature visual device: a horizontal strip of rectangular segments
+// that fill with amber to represent a rating out of 10.
+
+/** Full 10-segment strip used in the expand panel for rating input */
+function TicketStripInput({ value, onChange }) {
+  return (
+    <div className="rating-input-row">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+        <button
+          key={n}
+          type="button"
+          className={`rating-seg-btn ${value >= n ? 'active' : ''}`}
+          onClick={() => onChange(n)}
+          title={`${n}/10`}
+          aria-label={`Rate ${n} out of 10`}
+        >
+          {n}
+        </button>
+      ))}
+      {value > 0 && (
+        <span className="rating-value-label">{value} / 10</span>
+      )}
+    </div>
+  );
+}
+
+/** Compact 3-segment badge derived from a 1–10 average */
+function TicketBadge({ avg, label }) {
+  // Map avg (1-10) to how many of 3 segments are filled
+  const filled = avg >= 7 ? 3 : avg >= 4 ? 2 : 1;
+  return (
+    <span className="movie-rating-badge">
+      <span className="ticket-strip-sm" aria-hidden="true">
+        {[1, 2, 3].map((n) => (
+          <span key={n} className={`ticket-seg-sm ${n <= filled ? 'filled' : ''}`} />
+        ))}
+      </span>
+      {label}
+    </span>
+  );
+}
+
+// ── Main MovieCard ─────────────────────────────────────────────────────────────
 export default function MovieCard({
   movie,
   onAdd,
@@ -39,7 +83,7 @@ export default function MovieCard({
               onClick={() => onAdd && onAdd(movie)}
               id={`add-movie-btn-${movie.id}`}
             >
-              + Add
+              Add to Group
             </button>
           </div>
         )}
@@ -47,22 +91,22 @@ export default function MovieCard({
 
       <div className="movie-info">
         <div className="movie-title" title={movie.title}>{movie.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+        <div className="movie-info-row">
           <span className="movie-year">{year || '—'}</span>
           {avgRating && (
-            <span className="movie-rating-badge">⭐ {avgRating}</span>
+            <TicketBadge avg={parseFloat(avgRating)} label={avgRating} />
           )}
         </div>
 
         {showFeedback && (
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 8 }}>
             <button
               className="btn btn-ghost btn-sm"
               style={{ width: '100%', fontSize: 12 }}
               onClick={() => setExpanded(!expanded)}
               id={`expand-movie-btn-${movie.movie_id}`}
             >
-              {expanded ? '▲ Hide' : '▼ Rate & Review'}
+              {expanded ? 'Collapse' : 'Rate & Review'}
             </button>
           </div>
         )}
@@ -72,26 +116,20 @@ export default function MovieCard({
         <div className="expand-panel">
           {/* Ratings section */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-              Your Rating
-            </div>
+            <div className="panel-section-label">Your Rating</div>
             <RatingInput onSubmit={(val) => onRate && onRate(movie.movie_id, val)} />
           </div>
 
           {/* Review section */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-              Your Review
-            </div>
+            <div className="panel-section-label">Your Review</div>
             <ReviewInput onSubmit={(val) => onReview && onReview(movie.movie_id, val)} />
           </div>
 
           {/* Existing reviews */}
           {ratingsData?.reviews?.length > 0 && (
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                Group Reviews
-              </div>
+              <div className="panel-section-label">Group Reviews</div>
               {ratingsData.reviews.map((r, i) => (
                 <div key={r.review_id || i} className="review-item">
                   <div className="review-header">
@@ -106,13 +144,13 @@ export default function MovieCard({
           {/* Ratings summary */}
           {ratingsData?.ratings?.length > 0 && (
             <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+              <div className="panel-section-label">
                 Ratings ({ratingsData.ratings.length})
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {ratingsData.ratings.map((r, i) => (
                   <span key={i} className="badge badge-accent">
-                    ⭐ {r.rating}/10
+                    {r.rating}/10
                   </span>
                 ))}
               </div>
@@ -124,6 +162,7 @@ export default function MovieCard({
   );
 }
 
+// ── RatingInput ───────────────────────────────────────────────────────────────
 function RatingInput({ onSubmit }) {
   const [selected, setSelected] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -136,24 +175,12 @@ function RatingInput({ onSubmit }) {
   }
 
   if (submitted) {
-    return <div className="alert alert-success" style={{ fontSize: 13 }}>✓ Rating saved!</div>;
+    return <div className="alert alert-success" style={{ fontSize: 13 }}>Rating saved!</div>;
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div className="rating-input">
-        {[1,2,3,4,5,6,7,8,9,10].map(n => (
-          <div
-            key={n}
-            className={`rating-dot ${selected >= n ? 'active' : ''}`}
-            onClick={() => setSelected(n)}
-            title={`${n}/10`}
-          >
-            {n}
-          </div>
-        ))}
-        {selected > 0 && <span className="rating-value">{selected}/10</span>}
-      </div>
+      <TicketStripInput value={selected} onChange={setSelected} />
       {selected > 0 && (
         <button className="btn btn-primary btn-sm" style={{ width: 'fit-content' }} onClick={handleSubmit}>
           Submit Rating
@@ -163,6 +190,7 @@ function RatingInput({ onSubmit }) {
   );
 }
 
+// ── ReviewInput ───────────────────────────────────────────────────────────────
 function ReviewInput({ onSubmit }) {
   const [text, setText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -176,7 +204,7 @@ function ReviewInput({ onSubmit }) {
   }
 
   if (submitted) {
-    return <div className="alert alert-success" style={{ fontSize: 13 }}>✓ Review posted!</div>;
+    return <div className="alert alert-success" style={{ fontSize: 13 }}>Review posted!</div>;
   }
 
   return (
