@@ -110,9 +110,9 @@ export default function GroupsList() {
             </div>
           ) : groups.length === 0 ? (
             <div className="empty-groups-card">
-              <span className="empty-icon">🎪</span>
-              <h3>No groups yet</h3>
-              <p>Create your first group to start watching and rating movies with friends.</p>
+              <span className="empty-icon">🎞</span>
+              <h3>Start your first group</h3>
+              <p>Pick a name, invite your friends, and start rating movies together.</p>
               <button
                 className="btn btn-primary"
                 onClick={() => setCreateOpen(true)}

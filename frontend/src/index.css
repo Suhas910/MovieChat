@@ -288,10 +288,22 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   color: #e07080;
   border-color: rgba(192, 56, 74, 0.3);
 }
+/*
+  Motion Moment 2: Stamp confirmation
+  Success alerts overshoot slightly — like a ticket being stamped,
+  not just text fading in. Deliberately different from the generic fadeIn.
+*/
 .alert-success {
   background: var(--success-dim);
   color: var(--success);
   border-color: rgba(75, 168, 130, 0.3);
+  animation: stamp 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes stamp {
+  0%   { transform: scale(0.88) translateY(6px); opacity: 0; }
+  55%  { transform: scale(1.04) translateY(0);   opacity: 1; }
+  80%  { transform: scale(0.98); }
+  100% { transform: scale(1)    translateY(0); }
 }
 
 /* ─── Divider ────────────────────────────────────────────────── */
@@ -614,9 +626,9 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   background: var(--slate);
   border-left-color: var(--amber);
   border-color: var(--border-mid);
-  border-left-color: var(--amber);
-  transform: translateX(3px);
-  box-shadow: var(--shadow-md);
+  transform: translateX(4px);
+  /* Shadow biased right to reinforce the slide direction */
+  box-shadow: 6px 0 28px rgba(0,0,0,0.45), 0 4px 16px rgba(0,0,0,0.3);
 }
 
 .group-card-icon {
@@ -949,6 +961,13 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   flex-wrap: wrap;
 }
 
+/*
+  Motion Moment 1: Ticket-strip rating fill sweep
+  When segments become active, they spring up from below with a
+  staggered delay — creating a left-to-right wave as you select.
+  Only newly-activated segments animate; already-active ones stay still.
+  Deactivation reverts via background transition (no animation needed).
+*/
 .rating-seg-btn {
   width: 22px;
   height: 28px;
@@ -956,7 +975,9 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   border: 1px solid rgba(255,255,255,0.08);
   background: var(--slate);
   cursor: pointer;
-  transition: all var(--t);
+  /* background/color transition handles deactivation smoothly */
+  transition: background 0.14s ease, border-color 0.14s ease,
+              color 0.14s ease, transform 0.1s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -970,11 +991,28 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   background: var(--amber);
   border-color: var(--amber-hover);
   color: #1a0d00;
+  animation: seg-fill 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+/* Staggered delays — newly activated segments create a sweep */
+.rating-seg-btn:nth-child(1).active  { animation-delay:   0ms; }
+.rating-seg-btn:nth-child(2).active  { animation-delay:  18ms; }
+.rating-seg-btn:nth-child(3).active  { animation-delay:  36ms; }
+.rating-seg-btn:nth-child(4).active  { animation-delay:  54ms; }
+.rating-seg-btn:nth-child(5).active  { animation-delay:  72ms; }
+.rating-seg-btn:nth-child(6).active  { animation-delay:  90ms; }
+.rating-seg-btn:nth-child(7).active  { animation-delay: 108ms; }
+.rating-seg-btn:nth-child(8).active  { animation-delay: 126ms; }
+.rating-seg-btn:nth-child(9).active  { animation-delay: 144ms; }
+.rating-seg-btn:nth-child(10).active { animation-delay: 162ms; }
+@keyframes seg-fill {
+  from { transform: scaleY(0.45); opacity: 0.4; }
+  to   { transform: scaleY(1);    opacity: 1; }
 }
 .rating-seg-btn:hover:not(.active) {
   background: var(--slate-hover);
   border-color: var(--amber-dim);
   color: var(--amber);
+  transform: scaleY(1.12);
 }
 
 .rating-value-label {
@@ -992,7 +1030,13 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   background: var(--ink);
   border-top: 1px solid var(--border);
   padding: 16px 14px;
-  animation: fadeIn 0.2s ease;
+  animation: expandReveal 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top;
+  overflow: hidden;
+}
+@keyframes expandReveal {
+  from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+  to   { opacity: 1; max-height: 800px; padding-top: 16px; padding-bottom: 14px; }
 }
 
 .panel-section-label {

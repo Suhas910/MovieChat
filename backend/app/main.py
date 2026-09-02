@@ -288,7 +288,9 @@ def add_rating(
     db.add(new_rating)
     db.commit()
 
-    return {"message": "Rating added"}
+    user = db.query(models.User).filter(models.User.user_id == current_user.user_id).first()
+
+    return {"message": "Rating added","username":user.username}
 
 
 @app.post("/groups/{group_id}/movies/{movie_id}/add-review")
@@ -309,7 +311,9 @@ def add_review(
     db.add(new_review)
     db.commit()
 
-    return {"rating added successfully"}
+    user = db.query(models.User).filter(models.User.user_id == current_user.user_id).first()
+
+    return {"message":"Review added successfully", "username":user.username}
 
 
 @app.get("/groups/{group_id}/movies/{movie_id}/rating&review")
@@ -331,7 +335,27 @@ def rating_review(
         .all()
     )
 
+    ratings_data = []
+    for r in all_ratings:
+        rating_user = db.query(models.User).filter(models.User.user_id == r.user_id).first()
+        ratings_data.append({
+            "user_id": r.user_id,
+            "username": rating_user.username,
+            "rating": r.rating,
+        })
+
+    reviews_data = []
+    for rev in all_reviews:
+        review_user = db.query(models.User).filter(models.User.user_id == rev.user_id).first()
+        reviews_data.append({
+            "review_id": rev.review_id,
+            "user_id": rev.user_id,
+            "username": review_user.username,
+            "content": rev.content,
+            "created_at": rev.created_at,
+        })
+
     return {
-        "ratings": all_ratings,
-        "reviews": all_reviews,
+        "ratings": ratings_data,
+        "reviews": reviews_data,
     }

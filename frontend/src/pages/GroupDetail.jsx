@@ -278,9 +278,9 @@ export default function GroupDetail() {
               </div>
             ) : groupMovies.length === 0 ? (
               <div className="empty-groups-card">
-                <span className="empty-icon">🍿</span>
-                <h3>No movies yet</h3>
-                <p>Search for a movie above or browse popular movies to add one to the group.</p>
+                <span className="empty-icon">🎬</span>
+                <h3>Nothing queued up yet</h3>
+                <p>Search for a title above, or pick one from Popular Now — the first add is the hardest.</p>
               </div>
             ) : (
               <div className="grid-cards">
@@ -342,7 +342,7 @@ export default function GroupDetail() {
             />
           </div>
           <p style={{ fontSize: 13, color: 'var(--fog)', marginTop: -8 }}>
-            Only the group creator can add members.
+            Only the group creator can add members. They must already have an account.
           </p>
           {memberError && <div className="alert alert-error" id="member-error">{memberError}</div>}
           {memberMsg && <div className="alert alert-success" id="member-success">{memberMsg}</div>}
@@ -479,7 +479,7 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {feedback.ratings.map((r, i) => (
-                      <span key={i} className="badge badge-accent">{r.rating}/10</span>
+                      <span key={i} className="badge badge-accent">{r.username}: {r.rating}/10</span>
                     ))}
                   </div>
                   <div style={{ marginTop: 6, fontSize: 13, color: 'var(--silver)' }}>
@@ -501,7 +501,7 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
                   {feedback.reviews.map((rev, i) => (
                     <div key={rev.review_id || i} className="review-item">
                       <div className="review-header">
-                        <span className="review-author">User #{rev.user_id}</span>
+                        <span className="review-author">{rev.username}</span>
                         {rev.created_at && (
                           <span className="review-date">
                             {new Date(rev.created_at).toLocaleDateString()}
@@ -516,7 +516,7 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
 
               {feedback.ratings.length === 0 && feedback.reviews.length === 0 && (
                 <p style={{ fontSize: 13, color: 'var(--fog)', textAlign: 'center', paddingTop: 12 }}>
-                  Be the first to rate or review this movie.
+                  No ratings or reviews yet — be the first.
                 </p>
               )}
             </>
