@@ -30,7 +30,7 @@ class Movie(Base):
     __tablename__ = "movies"
 
     movie_id = Column(Integer, primary_key=True, index=True)
-    tmdb_id = Column(Integer, unique=True, index=True)
+    tmdb_id = Column(Integer, index=True)  # not globally unique — same movie can be in different groups
     title = Column(String, index=True)
     poster_url = Column(String)
     desc = Column(String)

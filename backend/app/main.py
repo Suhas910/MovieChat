@@ -21,12 +21,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -161,25 +156,27 @@ def add_member(
     return {"user added"}
 
 
-# all groups user is in
+# all groups user is in — returns full objects with group_id and name
 @app.get("/my_groups")
 def my_groups(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    all_groups_id = (
+    memberships = (
         db.query(models.GroupMember)
         .filter(models.GroupMember.user_id == current_user.user_id)
         .all()
     )
-    all_groups_names = []
-    for id in all_groups_id:
-        grp_id = id.group_id
-        grp_name = (
-            db.query(models.Group).filter(models.Group.group_id == grp_id).first()
+    groups = []
+    for membership in memberships:
+        grp = (
+            db.query(models.Group)
+            .filter(models.Group.group_id == membership.group_id)
+            .first()
         )
-        all_groups_names.append(grp_name.name)
-    return all_groups_names
+        if grp:
+            groups.append({"group_id": grp.group_id, "name": grp.name})
+    return groups
 
 
 @app.get("/groups/{group_id}/popular_movies")
@@ -210,9 +207,21 @@ def add_movie(
     db: Session = Depends(get_db),
 ):
     data = tmdb_service.search_movie(query)
+    if not data or not data.get("results"):
+        raise HTTPException(status_code=404, detail="Movie not found on TMDB")
     first_item = data["results"][0]
 
-    # should add this movie post in db
+    # Check if this movie already exists in this group (by tmdb_id + group_id)
+    existing = (
+        db.query(models.Movie)
+        .filter(
+            models.Movie.tmdb_id == first_item["id"],
+            models.Movie.group_id == group_id,
+        )
+        .first()
+    )
+    if existing:
+        return {"message": "Movie already in group", "movie_id": existing.movie_id}
 
     new_movie = models.Movie(
         tmdb_id=first_item["id"],
@@ -226,8 +235,9 @@ def add_movie(
 
     db.add(new_movie)
     db.commit()
+    db.refresh(new_movie)
 
-    return {"message": "Movie added successfully"}
+    return {"message": "Movie added successfully", "movie_id": new_movie.movie_id}
 
 
 @app.get("/groups/{group_id}/movies")
@@ -254,17 +264,31 @@ def add_rating(
     current_user: models.User = Depends(verify_grp_membership),
     db: Session = Depends(get_db),
 ):
+    # Upsert: update if this user already rated this movie in this group
+    existing = (
+        db.query(models.Rating)
+        .filter(
+            models.Rating.user_id == current_user.user_id,
+            models.Rating.movie_id == movie_id,
+            models.Rating.group_id == group_id,
+        )
+        .first()
+    )
+    if existing:
+        existing.rating = user_rating.rating
+        db.commit()
+        return {"message": "Rating updated"}
+
     new_rating = models.Rating(
         user_id=current_user.user_id,
         movie_id=movie_id,
         group_id=group_id,
         rating=user_rating.rating,
     )
-
     db.add(new_rating)
     db.commit()
 
-    return {"rating added successfully"}
+    return {"message": "Rating added"}
 
 
 @app.post("/groups/{group_id}/movies/{movie_id}/add-review")
