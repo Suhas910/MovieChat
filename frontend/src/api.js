@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'https://moviechat-api.onrender.com';
 
 async function request(path, { method = 'GET', body, token, queryParams } = {}) {
   const headers = { 'Content-Type': 'application/json' };
