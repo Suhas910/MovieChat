@@ -18,6 +18,27 @@ function StarBadge({ avg, label }) {
   );
 }
 
+/** Inline read-only star display for a given value */
+function StarDisplay({ value, size = 14 }) {
+  return (
+    <span className="star-badge-strip" aria-hidden="true" style={{ gap: 1 }}>
+      {[1, 2, 3, 4, 5].map((star) => {
+        const cls =
+          value >= star ? "full" : value >= star - 0.5 ? "half" : "empty";
+        return (
+          <span
+            key={star}
+            className={`star-badge-icon ${cls}`}
+            style={{ fontSize: size }}
+          >
+            ★
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 // ── Main MovieCard ─────────────────────────────────────────────────────────────
 export default function MovieCard({
   movie,
@@ -30,6 +51,8 @@ export default function MovieCard({
   id,
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState("rate");
+
   const posterSrc =
     movie.poster_url || movie.poster_path
       ? `${TMDB_IMG}${movie.poster_url || movie.poster_path}`
@@ -43,6 +66,9 @@ export default function MovieCard({
         ratingsData.ratings.length
       ).toFixed(1)
     : null;
+
+  const buzzCount =
+    (ratingsData?.ratings?.length || 0) + (ratingsData?.reviews?.length || 0);
 
   return (
     <div
@@ -83,12 +109,24 @@ export default function MovieCard({
         {showFeedback && (
           <div style={{ marginTop: 8 }}>
             <button
-              className="btn btn-ghost btn-sm"
-              style={{ width: "100%", fontSize: 12 }}
+              className={`ep-toggle-btn ${expanded ? "open" : ""}`}
               onClick={() => setExpanded(!expanded)}
               id={`expand-movie-btn-${movie.movie_id}`}
             >
-              {expanded ? "Collapse" : "Rate & Review"}
+              <span className="ep-toggle-label">
+                {expanded ? "Close" : "Rate & Review"}
+              </span>
+              <span className="ep-toggle-chevron">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path
+                    d="M2 3.5L5 6.5L8 3.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
             </button>
           </div>
         )}
@@ -96,50 +134,109 @@ export default function MovieCard({
 
       {expanded && showFeedback && (
         <div className="expand-panel">
-          {/* Ratings section */}
-          <div style={{ marginBottom: 14 }}>
-            <div className="panel-section-label">Your Rating</div>
-            <RatingInput
-              onSubmit={(val) => onRate && onRate(movie.movie_id, val)}
-            />
+          {/* Tab bar */}
+          <div className="ep-tabs">
+            <button
+              className={`ep-tab ${activeTab === "rate" ? "active" : ""}`}
+              onClick={() => setActiveTab("rate")}
+            >
+              <span className="ep-tab-icon">✦</span>
+              Rate &amp; Review
+            </button>
+            <button
+              className={`ep-tab ${activeTab === "buzz" ? "active" : ""}`}
+              onClick={() => setActiveTab("buzz")}
+            >
+              <span className="ep-tab-icon">👥</span>
+              Group Buzz
+              {buzzCount > 0 && (
+                <span className="ep-tab-pill">{buzzCount}</span>
+              )}
+            </button>
           </div>
 
-          {/* Review section */}
-          <div style={{ marginBottom: 14 }}>
-            <div className="panel-section-label">Your Review</div>
-            <ReviewInput
-              onSubmit={(val) => onReview && onReview(movie.movie_id, val)}
-            />
-          </div>
-
-          {/* Existing reviews */}
-          {ratingsData?.reviews?.length > 0 && (
-            <div>
-              <div className="panel-section-label">Group Reviews</div>
-              {ratingsData.reviews.map((r, i) => (
-                <div key={r.review_id || i} className="review-item">
-                  <div className="review-header">
-                    <span className="review-author">User #{r.user_id}</span>
-                  </div>
-                  <p className="review-content">{r.content}</p>
-                </div>
-              ))}
+          {/* Tab: Rate & Review */}
+          {activeTab === "rate" && (
+            <div className="ep-pane">
+              <div className="ep-section">
+                <div className="ep-section-label">Your Rating</div>
+                <RatingInput
+                  onSubmit={(val) => onRate && onRate(movie.movie_id, val)}
+                />
+              </div>
+              <div className="ep-divider" />
+              <div className="ep-section">
+                <div className="ep-section-label">Your Review</div>
+                <ReviewInput
+                  onSubmit={(val) => onReview && onReview(movie.movie_id, val)}
+                />
+              </div>
             </div>
           )}
 
-          {/* Ratings summary */}
-          {ratingsData?.ratings?.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <div className="panel-section-label">
-                Ratings ({ratingsData.ratings.length})
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {ratingsData.ratings.map((r, i) => (
-                  <span key={i} className="badge badge-accent">
-                    {r.rating}/5
-                  </span>
-                ))}
-              </div>
+          {/* Tab: Group Buzz */}
+          {activeTab === "buzz" && (
+            <div className="ep-pane">
+              {(!ratingsData?.ratings?.length && !ratingsData?.reviews?.length) ? (
+                <div className="ep-empty">
+                  <span className="ep-empty-icon">🍿</span>
+                  <p>No ratings or reviews yet</p>
+                  <span className="ep-empty-sub">Be the first to share your take</span>
+                </div>
+              ) : (
+                <>
+                  {ratingsData?.ratings?.length > 0 && (
+                    <div className="ep-section">
+                      <div className="ep-section-label">
+                        Ratings · {ratingsData.ratings.length}
+                        {avgRating && (
+                          <span className="ep-avg-chip">avg {avgRating}</span>
+                        )}
+                      </div>
+                      <div className="ep-ratings-list">
+                        {ratingsData.ratings.map((r, i) => (
+                          <div key={i} className="ep-rating-row">
+                            <span className="ep-user-avatar">
+                              {(r.username || `U${r.user_id}`)[0].toUpperCase()}
+                            </span>
+                            <span className="ep-rating-user">
+                              {r.username || `User #${r.user_id}`}
+                            </span>
+                            <StarDisplay value={r.rating} size={12} />
+                            <span className="ep-rating-num">{r.rating}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {ratingsData?.reviews?.length > 0 && (
+                    <div className="ep-section">
+                      <div className="ep-section-label">
+                        Reviews · {ratingsData.reviews.length}
+                      </div>
+                      {ratingsData.reviews.map((r, i) => (
+                        <div key={r.review_id || i} className="ep-review-card">
+                          <div className="ep-review-header">
+                            <span className="ep-user-avatar">
+                              {(r.username || `U${r.user_id}`)[0].toUpperCase()}
+                            </span>
+                            <span className="ep-review-author">
+                              {r.username || `User #${r.user_id}`}
+                            </span>
+                            {r.created_at && (
+                              <span className="ep-review-date">
+                                {new Date(r.created_at).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          <p className="ep-review-body">{r.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -152,6 +249,7 @@ export default function MovieCard({
 function RatingInput({ onSubmit }) {
   const [selected, setSelected] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [hovered, setHovered] = useState(null);
 
   function handleSubmit() {
     if (selected > 0) {
@@ -162,18 +260,17 @@ function RatingInput({ onSubmit }) {
 
   if (submitted) {
     return (
-      <div className="alert alert-success" style={{ fontSize: 13 }}>
+      <div className="ep-success">
+        <span className="ep-success-icon">★</span>
         Rating saved!
       </div>
     );
   }
 
-  const [hovered, setHovered] = React.useState(null);
-
   const displayValue = hovered !== null ? hovered : selected;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div
         className="rating-input-row rating-stars"
         role="radiogroup"
@@ -227,8 +324,7 @@ function RatingInput({ onSubmit }) {
       </div>
       {selected > 0 && (
         <button
-          className="btn btn-primary btn-sm"
-          style={{ width: "fit-content" }}
+          className="ep-submit-btn"
           onClick={handleSubmit}
         >
           Submit Rating
@@ -253,7 +349,8 @@ function ReviewInput({ onSubmit }) {
 
   if (submitted) {
     return (
-      <div className="alert alert-success" style={{ fontSize: 13 }}>
+      <div className="ep-success">
+        <span className="ep-success-icon">💬</span>
         Review posted!
       </div>
     );
@@ -265,18 +362,13 @@ function ReviewInput({ onSubmit }) {
       style={{ display: "flex", flexDirection: "column", gap: 8 }}
     >
       <textarea
-        className="form-input"
-        placeholder="Write your thoughts..."
+        className="form-input ep-textarea"
+        placeholder="What did you think of this film?"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        style={{ minHeight: 64, fontSize: 13 }}
       />
       {text.trim() && (
-        <button
-          type="submit"
-          className="btn btn-primary btn-sm"
-          style={{ width: "fit-content" }}
-        >
+        <button type="submit" className="ep-submit-btn">
           Post Review
         </button>
       )}

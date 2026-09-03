@@ -10,6 +10,9 @@ export default function GroupDetail() {
   const { groupId } = useParams();
   const { token } = useAuth();
 
+  // ── Group Info ────────────────────────────────────────────────
+  const [groupName, setGroupName] = useState("");
+
   // ── Group Movies ──────────────────────────────────────────────
   const [groupMovies, setGroupMovies] = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
@@ -49,6 +52,17 @@ export default function GroupDetail() {
     const controller = new AbortController();
 
     async function loadPage() {
+      // Load group name from the user's groups list
+      try {
+        const groups = await api.myGroups(token);
+        const match = Array.isArray(groups)
+          ? groups.find((g) => String(g.group_id) === String(groupId))
+          : null;
+        if (match) setGroupName(match.name);
+      } catch (_) {
+        // Non-critical — fall back to empty
+      }
+
       const movies = await loadGroupMovies(controller.signal);
       await Promise.all(
         movies.map((movie) => loadFeedback(movie.movie_id, controller.signal)),
@@ -253,8 +267,7 @@ export default function GroupDetail() {
       <div className="group-header">
         <div>
           <div className="group-header-title-row">
-            <h1>Film Club</h1>
-            <span className="group-header-num">#{groupId}</span>
+            <h1>{groupName || "Group"}</h1>
           </div>
           <p>
             Search movies, add them to the group, then rate and review together.
@@ -633,6 +646,7 @@ function SearchResultCard({ movie, onAdd, onDismiss, adding }) {
 // ── Group Movie Card (with expand, rate, review) ───────────────────────────────
 function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
   const [expanded, setExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState("rate");
 
   const poster = movie.poster_url ? `${TMDB_IMG}${movie.poster_url}` : null;
   const year = (movie.release_year || "").slice(0, 4);
@@ -651,6 +665,9 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
 
   // avg is already a float for star display
   const avg = avgRating ? parseFloat(avgRating) : 0;
+
+  const buzzCount =
+    (feedback?.ratings?.length || 0) + (feedback?.reviews?.length || 0);
 
   function handleToggle() {
     if (!expanded) onExpand();
@@ -691,115 +708,144 @@ function GroupMovieCard({ movie, feedback, onExpand, onRate, onReview }) {
           )}
         </div>
         <button
-          className="btn btn-ghost btn-sm"
-          style={{ width: "100%", fontSize: 12, marginTop: 8 }}
+          className={`ep-toggle-btn ${expanded ? "open" : ""}`}
           onClick={handleToggle}
           id={`toggle-${movie.movie_id}`}
         >
-          {expanded ? "Collapse" : "Rate & Review"}
+          <span className="ep-toggle-label">
+            {expanded ? "Close" : "Rate & Review"}
+          </span>
+          <span className="ep-toggle-chevron">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path
+                d="M2 3.5L5 6.5L8 3.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
         </button>
       </div>
 
       {/* Expand Panel */}
       {expanded && (
         <div className="expand-panel">
-          {/* Rate */}
-          <RateSection movieId={movie.movie_id} onRate={onRate} />
-
-          <div className="divider" style={{ margin: "14px 0" }} />
-
-          {/* Review */}
-          <ReviewSection movieId={movie.movie_id} onReview={onReview} />
-
-          {/* Existing feedback */}
-          {feedback?.loading && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                padding: "16px 0",
-              }}
+          {/* Tab bar */}
+          <div className="ep-tabs">
+            <button
+              className={`ep-tab ${activeTab === "rate" ? "active" : ""}`}
+              onClick={() => setActiveTab("rate")}
             >
-              <div className="spinner spinner-sm" />
+              <span className="ep-tab-icon">✦</span>
+              Rate &amp; Review
+            </button>
+            <button
+              className={`ep-tab ${activeTab === "buzz" ? "active" : ""}`}
+              onClick={() => setActiveTab("buzz")}
+            >
+              <span className="ep-tab-icon">👥</span>
+              Group Buzz
+              {buzzCount > 0 && (
+                <span className="ep-tab-pill">{buzzCount}</span>
+              )}
+            </button>
+          </div>
+
+          {/* Tab: Rate & Review */}
+          {activeTab === "rate" && (
+            <div className="ep-pane">
+              <div className="ep-section">
+                <div className="ep-section-label">Your Rating</div>
+                <RateSection movieId={movie.movie_id} onRate={onRate} />
+              </div>
+              <div className="ep-divider" />
+              <div className="ep-section">
+                <div className="ep-section-label">Your Review</div>
+                <ReviewSection movieId={movie.movie_id} onReview={onReview} />
+              </div>
             </div>
           )}
 
-          {feedback?.loaded && (
-            <>
-              {/* Ratings summary */}
-              {validRatings.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  <div className="panel-section-label">
-                    Group Ratings ({validRatings.length})
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                    {feedback.ratings.map((r, i) => (
-                      <span key={i} className="badge badge-accent">
-                        {r.username}: {r.rating}/5
-                      </span>
-                    ))}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 13,
-                      color: "var(--silver)",
-                    }}
-                  >
-                    Average:{" "}
-                    <span
-                      style={{
-                        color: "var(--amber)",
-                        fontFamily: "var(--font-display)",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      {(
-                        feedback.ratings.reduce((s, r) => s + r.rating, 0) /
-                        feedback.ratings.length
-                      ).toFixed(1)}
-                    </span>{" "}
-                    / 5
-                  </div>
+          {/* Tab: Group Buzz */}
+          {activeTab === "buzz" && (
+            <div className="ep-pane">
+              {feedback?.loading && (
+                <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
+                  <div className="spinner spinner-sm" />
                 </div>
               )}
-
-              {/* Reviews */}
-              {feedback.reviews.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  <div className="panel-section-label">
-                    Reviews ({feedback.reviews.length})
-                  </div>
-                  {feedback.reviews.map((rev, i) => (
-                    <div key={rev.review_id || i} className="review-item">
-                      <div className="review-header">
-                        <span className="review-author">{rev.username}</span>
-                        {rev.created_at && (
-                          <span className="review-date">
-                            {new Date(rev.created_at).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                      <p className="review-content">{rev.content}</p>
+              {feedback?.loaded && (
+                <>
+                  {feedback.ratings.length === 0 && feedback.reviews.length === 0 ? (
+                    <div className="ep-empty">
+                      <span className="ep-empty-icon">🍿</span>
+                      <p>No ratings or reviews yet</p>
+                      <span className="ep-empty-sub">Be the first to share your take</span>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ) : (
+                    <>
+                      {validRatings.length > 0 && (
+                        <div className="ep-section">
+                          <div className="ep-section-label">
+                            Ratings · {validRatings.length}
+                            {avgRating && (
+                              <span className="ep-avg-chip">avg {avgRating}</span>
+                            )}
+                          </div>
+                          <div className="ep-ratings-list">
+                            {feedback.ratings.map((r, i) => (
+                              <div key={i} className="ep-rating-row">
+                                <span className="ep-user-avatar">
+                                  {(r.username || `U${r.user_id}`)[0].toUpperCase()}
+                                </span>
+                                <span className="ep-rating-user">
+                                  {r.username || `User #${r.user_id}`}
+                                </span>
+                                <span className="star-badge-strip" aria-hidden="true" style={{ gap: 1 }}>
+                                  {[1,2,3,4,5].map((s) => {
+                                    const cls = r.rating >= s ? "full" : r.rating >= s - 0.5 ? "half" : "empty";
+                                    return <span key={s} className={`star-badge-icon ${cls}`} style={{ fontSize: 11 }}>★</span>;
+                                  })}
+                                </span>
+                                <span className="ep-rating-num">{r.rating}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-              {feedback.ratings.length === 0 &&
-                feedback.reviews.length === 0 && (
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "var(--fog)",
-                      textAlign: "center",
-                      paddingTop: 12,
-                    }}
-                  >
-                    No ratings or reviews yet — be the first.
-                  </p>
-                )}
-            </>
+                      {feedback.reviews.length > 0 && (
+                        <div className="ep-section">
+                          <div className="ep-section-label">
+                            Reviews · {feedback.reviews.length}
+                          </div>
+                          {feedback.reviews.map((rev, i) => (
+                            <div key={rev.review_id || i} className="ep-review-card">
+                              <div className="ep-review-header">
+                                <span className="ep-user-avatar">
+                                  {(rev.username || `U${rev.user_id}`)[0].toUpperCase()}
+                                </span>
+                                <span className="ep-review-author">
+                                  {rev.username || `User #${rev.user_id}`}
+                                </span>
+                                {rev.created_at && (
+                                  <span className="ep-review-date">
+                                    {new Date(rev.created_at).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="ep-review-body">{rev.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -830,89 +876,86 @@ function RateSection({ movieId, onRate }) {
     }
   }
 
+  if (submitted) {
+    return (
+      <div className="ep-success" role="status">
+        <span className="ep-success-icon">★</span>
+        {submitting ? "Saving..." : "Rating saved!"}
+      </div>
+    );
+  }
+
+  const displayValue = hovered !== null ? hovered : selected;
+
   return (
-    <div>
-      <div className="panel-section-label">Rate this movie (0.5–5)</div>
-      {submitted ? (
-        <div className="rating-success" role="status">
-          <span className="rating-success-mark" aria-hidden="true">
-            ★
-          </span>
-          <span>{submitting ? "Saving your rating..." : "Rating saved!"}</span>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div
-            className="rating-input-row rating-stars"
-            role="radiogroup"
-            aria-label="Rate this movie from 0.5 to 5 stars"
-            onMouseLeave={() => setHovered(null)}
-          >
-            {[1, 2, 3, 4, 5].map((star) => {
-              const displayValue = hovered !== null ? hovered : selected;
-              const starValue =
-                displayValue >= star
-                  ? "full"
-                  : displayValue >= star - 0.5
-                    ? "half"
-                    : "empty";
-              return (
-                <span key={star} className="rating-star-cell">
-                  <span
-                    className={`rating-star-icon ${starValue}`}
-                    aria-hidden="true"
-                  >
-                    ★
-                  </span>
-                  <button
-                    type="button"
-                    className="rating-star-btn rating-star-half"
-                    onClick={() => setSelected(star - 0.5)}
-                    onMouseEnter={() => setHovered(star - 0.5)}
-                    title={`${star - 0.5}/5`}
-                    aria-label={`Rate ${star - 0.5} out of 5`}
-                    aria-checked={selected === star - 0.5}
-                    role="radio"
-                    id={`rate-${movieId}-${star - 0.5}`}
-                  />
-                  <button
-                    type="button"
-                    className="rating-star-btn rating-star-full"
-                    onClick={() => setSelected(star)}
-                    onMouseEnter={() => setHovered(star)}
-                    title={`${star}/5`}
-                    aria-label={`Rate ${star} out of 5`}
-                    aria-checked={selected === star}
-                    role="radio"
-                    id={`rate-${movieId}-${star}`}
-                  />
-                </span>
-              );
-            })}
-            {(hovered !== null ? hovered : selected) > 0 && (
-              <span className="rating-value-label">
-                {hovered !== null ? hovered : selected}
-                <small>/5</small>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        className="rating-input-row rating-stars"
+        role="radiogroup"
+        aria-label="Rate this movie from 0.5 to 5 stars"
+        onMouseLeave={() => setHovered(null)}
+      >
+        {[1, 2, 3, 4, 5].map((star) => {
+          const starValue =
+            displayValue >= star
+              ? "full"
+              : displayValue >= star - 0.5
+                ? "half"
+                : "empty";
+          return (
+            <span key={star} className="rating-star-cell">
+              <span
+                className={`rating-star-icon ${starValue}`}
+                aria-hidden="true"
+              >
+                ★
               </span>
-            )}
-          </div>
-          {error && (
-            <div className="alert alert-error" style={{ fontSize: 13 }}>
-              {error}
-            </div>
-          )}
-          {selected > 0 && (
-            <button
-              className="btn btn-primary btn-sm"
-              style={{ width: "fit-content" }}
-              onClick={submit}
-              disabled={submitting}
-              id={`submit-rate-${movieId}`}
-            >
-              {submitting ? "Saving..." : "Submit Rating"}
-            </button>
-          )}
+              <button
+                type="button"
+                className="rating-star-btn rating-star-half"
+                onClick={() => setSelected(star - 0.5)}
+                onMouseEnter={() => setHovered(star - 0.5)}
+                title={`${star - 0.5}/5`}
+                aria-label={`Rate ${star - 0.5} out of 5`}
+                aria-checked={selected === star - 0.5}
+                role="radio"
+                id={`rate-${movieId}-${star - 0.5}`}
+              />
+              <button
+                type="button"
+                className="rating-star-btn rating-star-full"
+                onClick={() => setSelected(star)}
+                onMouseEnter={() => setHovered(star)}
+                title={`${star}/5`}
+                aria-label={`Rate ${star} out of 5`}
+                aria-checked={selected === star}
+                role="radio"
+                id={`rate-${movieId}-${star}`}
+              />
+            </span>
+          );
+        })}
+        {(hovered !== null ? hovered : selected) > 0 && (
+          <span className="rating-value-label">
+            {hovered !== null ? hovered : selected}
+            <small>/5</small>
+          </span>
+        )}
+      </div>
+      {error && (
+        <div className="alert alert-error" style={{ fontSize: 13 }}>
+          {error}
         </div>
+      )}
+      {selected > 0 && (
+        <button
+          className="ep-submit-btn"
+          onClick={submit}
+          disabled={submitting}
+          id={`submit-rate-${movieId}`}
+        >
+          {submitting ? "Saving..." : "Submit Rating"}
+        </button>
       )}
     </div>
   );
@@ -932,39 +975,37 @@ function ReviewSection({ movieId, onReview }) {
     setTimeout(() => setSubmitted(false), 3000);
   }
 
+  if (submitted) {
+    return (
+      <div className="ep-success">
+        <span className="ep-success-icon">💬</span>
+        Review posted!
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <div className="panel-section-label">Write a review</div>
-      {submitted ? (
-        <div className="alert alert-success" style={{ fontSize: 13 }}>
-          Review posted!
-        </div>
-      ) : (
-        <form
-          onSubmit={submit}
-          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+    <form
+      onSubmit={submit}
+      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+    >
+      <textarea
+        className="form-input ep-textarea"
+        placeholder="Share your thoughts on this movie…"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        id={`review-input-${movieId}`}
+      />
+      {text.trim() && (
+        <button
+          type="submit"
+          className="ep-submit-btn"
+          id={`submit-review-${movieId}`}
         >
-          <textarea
-            className="form-input"
-            placeholder="Share your thoughts on this movie…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            style={{ minHeight: 68, fontSize: 13 }}
-            id={`review-input-${movieId}`}
-          />
-          {text.trim() && (
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm"
-              style={{ width: "fit-content" }}
-              id={`submit-review-${movieId}`}
-            >
-              Post Review
-            </button>
-          )}
-        </form>
+          Post Review
+        </button>
       )}
-    </div>
+    </form>
   );
 }
 
