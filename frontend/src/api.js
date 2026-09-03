@@ -1,5 +1,5 @@
 const BASE_URL =
-  import.meta.env.VITE_API_URL || "https://moviechat-api.onrender.com";
+  import.meta.env.VITE_API_URL || "https://moviechat-backend-2ypk.onrender.com";
 
 async function request(
   path,
