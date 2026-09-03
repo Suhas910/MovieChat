@@ -1,44 +1,17 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-const TMDB_IMG = 'https://image.tmdb.org/t/p/w500';
+const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
 
-// ── Ticket Strip helpers ──────────────────────────────────────────────────────
-// The signature visual device: a horizontal strip of rectangular segments
-// that fill with amber to represent a rating out of 10.
-
-/** Full 10-segment strip used in the expand panel for rating input */
-function TicketStripInput({ value, onChange }) {
-  return (
-    <div className="rating-input-row">
-      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-        <button
-          key={n}
-          type="button"
-          className={`rating-seg-btn ${value >= n ? 'active' : ''}`}
-          onClick={() => onChange(n)}
-          title={`${n}/10`}
-          aria-label={`Rate ${n} out of 10`}
-        >
-          {n}
-        </button>
-      ))}
-      {value > 0 && (
-        <span className="rating-value-label">{value} / 10</span>
-      )}
-    </div>
-  );
-}
-
-/** Compact 3-segment badge derived from a 1–10 average */
-function TicketBadge({ avg, label }) {
-  // Map avg (1-10) to how many of 3 segments are filled
-  const filled = avg >= 7 ? 3 : avg >= 4 ? 2 : 1;
+/** Compact 5-star read-only badge derived from a 0.5–5 average */
+function StarBadge({ avg, label }) {
   return (
     <span className="movie-rating-badge">
-      <span className="ticket-strip-sm" aria-hidden="true">
-        {[1, 2, 3].map((n) => (
-          <span key={n} className={`ticket-seg-sm ${n <= filled ? 'filled' : ''}`} />
-        ))}
+      <span className="star-badge-strip" aria-hidden="true">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const cls =
+            avg >= star ? "full" : avg >= star - 0.5 ? "half" : "empty";
+          return <span key={star} className={`star-badge-icon ${cls}`}>★</span>;
+        })}
       </span>
       {label}
     </span>
@@ -51,24 +24,31 @@ export default function MovieCard({
   onAdd,
   onRate,
   onReview,
-  showActions = false,  // shows add-to-group button (search results)
+  showActions = false, // shows add-to-group button (search results)
   showFeedback = false, // shows rate/review controls (group movies)
-  ratingsData = null,   // { ratings: [], reviews: [] }
+  ratingsData = null, // { ratings: [], reviews: [] }
   id,
 }) {
   const [expanded, setExpanded] = useState(false);
-  const posterSrc = movie.poster_url || movie.poster_path
-    ? `${TMDB_IMG}${movie.poster_url || movie.poster_path}`
-    : null;
+  const posterSrc =
+    movie.poster_url || movie.poster_path
+      ? `${TMDB_IMG}${movie.poster_url || movie.poster_path}`
+      : null;
 
-  const year = (movie.release_year || movie.release_date || '').slice(0, 4);
+  const year = (movie.release_year || movie.release_date || "").slice(0, 4);
 
   const avgRating = ratingsData?.ratings?.length
-    ? (ratingsData.ratings.reduce((sum, r) => sum + r.rating, 0) / ratingsData.ratings.length).toFixed(1)
+    ? (
+        ratingsData.ratings.reduce((sum, r) => sum + r.rating, 0) /
+        ratingsData.ratings.length
+      ).toFixed(1)
     : null;
 
   return (
-    <div className="movie-card fade-in" id={id || `movie-card-${movie.movie_id || movie.id}`}>
+    <div
+      className="movie-card fade-in"
+      id={id || `movie-card-${movie.movie_id || movie.id}`}
+    >
       <div className="movie-poster">
         {posterSrc ? (
           <img src={posterSrc} alt={movie.title} loading="lazy" />
@@ -79,7 +59,7 @@ export default function MovieCard({
           <div className="movie-poster-overlay">
             <button
               className="btn btn-primary btn-sm"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               onClick={() => onAdd && onAdd(movie)}
               id={`add-movie-btn-${movie.id}`}
             >
@@ -90,11 +70,13 @@ export default function MovieCard({
       </div>
 
       <div className="movie-info">
-        <div className="movie-title" title={movie.title}>{movie.title}</div>
+        <div className="movie-title" title={movie.title}>
+          {movie.title}
+        </div>
         <div className="movie-info-row">
-          <span className="movie-year">{year || '—'}</span>
+          <span className="movie-year">{year || "—"}</span>
           {avgRating && (
-            <TicketBadge avg={parseFloat(avgRating)} label={avgRating} />
+            <StarBadge avg={parseFloat(avgRating)} label={avgRating} />
           )}
         </div>
 
@@ -102,11 +84,11 @@ export default function MovieCard({
           <div style={{ marginTop: 8 }}>
             <button
               className="btn btn-ghost btn-sm"
-              style={{ width: '100%', fontSize: 12 }}
+              style={{ width: "100%", fontSize: 12 }}
               onClick={() => setExpanded(!expanded)}
               id={`expand-movie-btn-${movie.movie_id}`}
             >
-              {expanded ? 'Collapse' : 'Rate & Review'}
+              {expanded ? "Collapse" : "Rate & Review"}
             </button>
           </div>
         )}
@@ -117,13 +99,17 @@ export default function MovieCard({
           {/* Ratings section */}
           <div style={{ marginBottom: 14 }}>
             <div className="panel-section-label">Your Rating</div>
-            <RatingInput onSubmit={(val) => onRate && onRate(movie.movie_id, val)} />
+            <RatingInput
+              onSubmit={(val) => onRate && onRate(movie.movie_id, val)}
+            />
           </div>
 
           {/* Review section */}
           <div style={{ marginBottom: 14 }}>
             <div className="panel-section-label">Your Review</div>
-            <ReviewInput onSubmit={(val) => onReview && onReview(movie.movie_id, val)} />
+            <ReviewInput
+              onSubmit={(val) => onReview && onReview(movie.movie_id, val)}
+            />
           </div>
 
           {/* Existing reviews */}
@@ -147,10 +133,10 @@ export default function MovieCard({
               <div className="panel-section-label">
                 Ratings ({ratingsData.ratings.length})
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {ratingsData.ratings.map((r, i) => (
                   <span key={i} className="badge badge-accent">
-                    {r.rating}/10
+                    {r.rating}/5
                   </span>
                 ))}
               </div>
@@ -175,14 +161,76 @@ function RatingInput({ onSubmit }) {
   }
 
   if (submitted) {
-    return <div className="alert alert-success" style={{ fontSize: 13 }}>Rating saved!</div>;
+    return (
+      <div className="alert alert-success" style={{ fontSize: 13 }}>
+        Rating saved!
+      </div>
+    );
   }
 
+  const [hovered, setHovered] = React.useState(null);
+
+  const displayValue = hovered !== null ? hovered : selected;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <TicketStripInput value={selected} onChange={setSelected} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        className="rating-input-row rating-stars"
+        role="radiogroup"
+        aria-label="Rate this movie from 0.5 to 5 stars"
+        onMouseLeave={() => setHovered(null)}
+      >
+        {[1, 2, 3, 4, 5].map((star) => {
+          const starValue =
+            displayValue >= star
+              ? "full"
+              : displayValue >= star - 0.5
+                ? "half"
+                : "empty";
+          return (
+            <span key={star} className="rating-star-cell">
+              <span
+                className={`rating-star-icon ${starValue}`}
+                aria-hidden="true"
+              >
+                ★
+              </span>
+              <button
+                type="button"
+                className="rating-star-btn rating-star-half"
+                onClick={() => setSelected(star - 0.5)}
+                onMouseEnter={() => setHovered(star - 0.5)}
+                title={`${star - 0.5}/5`}
+                aria-label={`Rate ${star - 0.5} out of 5`}
+                aria-checked={selected === star - 0.5}
+                role="radio"
+              />
+              <button
+                type="button"
+                className="rating-star-btn rating-star-full"
+                onClick={() => setSelected(star)}
+                onMouseEnter={() => setHovered(star)}
+                title={`${star}/5`}
+                aria-label={`Rate ${star} out of 5`}
+                aria-checked={selected === star}
+                role="radio"
+              />
+            </span>
+          );
+        })}
+        {(hovered !== null ? hovered : selected) > 0 && (
+          <span className="rating-value-label">
+            {hovered !== null ? hovered : selected}
+            <small>/5</small>
+          </span>
+        )}
+      </div>
       {selected > 0 && (
-        <button className="btn btn-primary btn-sm" style={{ width: 'fit-content' }} onClick={handleSubmit}>
+        <button
+          className="btn btn-primary btn-sm"
+          style={{ width: "fit-content" }}
+          onClick={handleSubmit}
+        >
           Submit Rating
         </button>
       )}
@@ -192,7 +240,7 @@ function RatingInput({ onSubmit }) {
 
 // ── ReviewInput ───────────────────────────────────────────────────────────────
 function ReviewInput({ onSubmit }) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   function handleSubmit(e) {
@@ -204,20 +252,31 @@ function ReviewInput({ onSubmit }) {
   }
 
   if (submitted) {
-    return <div className="alert alert-success" style={{ fontSize: 13 }}>Review posted!</div>;
+    return (
+      <div className="alert alert-success" style={{ fontSize: 13 }}>
+        Review posted!
+      </div>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+    >
       <textarea
         className="form-input"
         placeholder="Write your thoughts..."
         value={text}
-        onChange={e => setText(e.target.value)}
+        onChange={(e) => setText(e.target.value)}
         style={{ minHeight: 64, fontSize: 13 }}
       />
       {text.trim() && (
-        <button type="submit" className="btn btn-primary btn-sm" style={{ width: 'fit-content' }}>
+        <button
+          type="submit"
+          className="btn btn-primary btn-sm"
+          style={{ width: "fit-content" }}
+        >
           Post Review
         </button>
       )}

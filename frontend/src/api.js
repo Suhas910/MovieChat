@@ -1,8 +1,12 @@
-const BASE_URL = 'https://moviechat-api.onrender.com';
+const BASE_URL =
+  import.meta.env.VITE_API_URL || "https://moviechat-api.onrender.com";
 
-async function request(path, { method = 'GET', body, token, queryParams } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+async function request(
+  path,
+  { method = "GET", body, token, queryParams, signal, timeoutMs = 15000 } = {},
+) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   // Build URL — use raw string concatenation for paths with special chars like &
   let url = `${BASE_URL}${path}`;
@@ -11,72 +15,104 @@ async function request(path, { method = 'GET', body, token, queryParams } = {}) 
     url += `?${params.toString()}`;
   }
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const abortRequest = () => controller.abort();
+  signal?.addEventListener("abort", abortRequest, { once: true });
 
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.detail || `Request failed: ${res.status}`);
+  try {
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("moviechat:unauthorized"));
+      }
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Request failed: ${res.status}`);
+    }
+
+    return res.status === 204 ? null : res.json();
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(
+        signal?.aborted
+          ? "Request cancelled"
+          : "Request timed out. Please try again.",
+        { cause: error },
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", abortRequest);
   }
-
-  return res.status === 204 ? null : res.json();
 }
 
 export const api = {
   // ── Auth ──────────────────────────────────────────────────────────────────
   register: (username, email, password) =>
-    request('/register', { method: 'POST', body: { username, email, password } }),
+    request("/register", {
+      method: "POST",
+      body: { username, email, password },
+    }),
 
   login: (username, password) =>
-    request('/login', { method: 'POST', body: { username, password } }),
+    request("/login", { method: "POST", body: { username, password } }),
 
   // ── Groups ─────────────────────────────────────────────────────────────────
   // Returns: [{ group_id: int, name: string }, ...]
-  myGroups: (token) =>
-    request('/my_groups', { token }),
+  myGroups: (token) => request("/my_groups", { token }),
 
   // Returns the new group object: { group_id, name, created_by }
   createGroup: (name, token) =>
-    request('/create_group', { method: 'POST', body: { name }, token }),
+    request("/create_group", { method: "POST", body: { name }, token }),
 
   // POST /groups/{group_id}/add-member?username=...  (admin only)
   addMember: (groupId, username, token) =>
     request(`/groups/${groupId}/add-member`, {
-      method: 'POST',
+      method: "POST",
       queryParams: { username },
       token,
     }),
 
+  // GET /groups/{group_id}/all-members -> [username, ...]
+  groupMembers: (groupId, token) =>
+    request(`/groups/${groupId}/all-members`, { token }),
+
   // ── Movies ─────────────────────────────────────────────────────────────────
   // GET /groups/{group_id}/popular_movies  → TMDB popular list
-  popularMovies: (groupId, token) =>
-    request(`/groups/${groupId}/popular_movies`, { token }),
+  popularMovies: (groupId, token, options = {}) =>
+    request(`/groups/${groupId}/popular_movies`, { token, ...options }),
 
   // GET /groups/{group_id}/movies/{query}  → single TMDB result (first match)
   searchMovie: (groupId, query, token) =>
-    request(`/groups/${groupId}/movies/${encodeURIComponent(query)}`, { token }),
+    request(`/groups/${groupId}/movies/${encodeURIComponent(query)}`, {
+      token,
+    }),
 
   // POST /groups/{group_id}/movies/{query}  → adds that movie to the group
   addMovie: (groupId, query, token) =>
     request(`/groups/${groupId}/movies/${encodeURIComponent(query)}`, {
-      method: 'POST',
+      method: "POST",
       token,
     }),
 
   // GET /groups/{group_id}/movies  → all movies saved in the group
   // Returns: [{ movie_id, tmdb_id, title, poster_url, desc, release_year, group_id, added_by }, ...]
-  groupMovies: (groupId, token) =>
-    request(`/groups/${groupId}/movies`, { token }),
+  groupMovies: (groupId, token, options = {}) =>
+    request(`/groups/${groupId}/movies`, { token, ...options }),
 
   // ── Ratings ─────────────────────────────────────────────────────────────────
-  // POST /groups/{group_id}/movies/{movie_id}/add-rating  body: { rating: 1-10 }
+  // POST /groups/{group_id}/movies/{movie_id}/add-rating  body: { rating: 0.5-5 }
   // Upserts: updates existing rating if user already rated
   addRating: (groupId, movieId, rating, token) =>
     request(`/groups/${groupId}/movies/${movieId}/add-rating`, {
-      method: 'POST',
+      method: "POST",
       body: { rating },
       token,
     }),
@@ -85,7 +121,7 @@ export const api = {
   // POST /groups/{group_id}/movies/{movie_id}/add-review?user_review=...
   addReview: (groupId, movieId, content, token) =>
     request(`/groups/${groupId}/movies/${movieId}/add-review`, {
-      method: 'POST',
+      method: "POST",
       queryParams: { user_review: content },
       token,
     }),
@@ -93,6 +129,9 @@ export const api = {
   // GET /groups/{group_id}/movies/{movie_id}/rating&review
   // The & is a literal character in the URL path — not a query separator
   // Returns: { ratings: [...], reviews: [...] }
-  ratingsAndReviews: (groupId, movieId, token) =>
-    request(`/groups/${groupId}/movies/${movieId}/rating&review`, { token }),
+  ratingsAndReviews: (groupId, movieId, token, options = {}) =>
+    request(`/groups/${groupId}/movies/${movieId}/rating&review`, {
+      token,
+      ...options,
+    }),
 };

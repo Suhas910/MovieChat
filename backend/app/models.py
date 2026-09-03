@@ -1,5 +1,15 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, CheckConstraint, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Float,
+    Text,
+    DateTime,
+    ForeignKey,
+    CheckConstraint,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import declarative_base, relationship
 from .database import Base
 
@@ -12,12 +22,14 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
 
+
 class Group(Base):
     __tablename__ = "groups"
 
     group_id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     created_by = Column(Integer, ForeignKey("users.user_id"))
+
 
 class GroupMember(Base):
     __tablename__ = "groupmember"
@@ -26,19 +38,23 @@ class GroupMember(Base):
     user_id = Column(Integer, ForeignKey("users.user_id"))
     group_id = Column(Integer, ForeignKey("groups.group_id"))
 
+
 class Movie(Base):
     __tablename__ = "movies"
 
     movie_id = Column(Integer, primary_key=True, index=True)
-    tmdb_id = Column(Integer, index=True)  # not globally unique — same movie can be in different groups
+    tmdb_id = Column(
+        Integer, index=True
+    )  # not globally unique — same movie can be in different groups
     title = Column(String, index=True)
     poster_url = Column(String)
     desc = Column(String)
     release_year = Column(String)
-    #created_at = Column(DateTime, default= datetime.now(timezone.utc))
+    # created_at = Column(DateTime, default= datetime.now(timezone.utc))
 
     group_id = Column(Integer, ForeignKey("groups.group_id"))
-    added_by =  Column(Integer, ForeignKey("users.user_id"))
+    added_by = Column(Integer, ForeignKey("users.user_id"))
+
 
 class Rating(Base):
     __tablename__ = "ratings"
@@ -46,7 +62,12 @@ class Rating(Base):
     user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)
     movie_id = Column(Integer, ForeignKey("movies.movie_id"), primary_key=True)
     group_id = Column(Integer, ForeignKey("groups.group_id"), primary_key=True)
-    rating = Column(Integer) # 1 to 10
+    rating = Column(Float, nullable=False)  # 0.5 to 5
+    __table_args__ = (
+        CheckConstraint("rating >= 0.5 AND rating <= 5", name="rating_range"),
+        CheckConstraint("(rating * 2) = FLOOR(rating * 2)", name="rating_half_step"),
+    )
+
 
 class Review(Base):
     __tablename__ = "reviews"
@@ -57,12 +78,3 @@ class Review(Base):
     group_id = Column(Integer, ForeignKey("groups.group_id"))
     content = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
-
-
-
-
-
-
-
-
-

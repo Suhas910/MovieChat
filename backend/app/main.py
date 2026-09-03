@@ -21,7 +21,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173","https://moviechat-frontend.onrender.com"],
+    allow_origins=["http://localhost:5173", "https://moviechat-frontend.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -128,7 +128,6 @@ def create_group(
     return new_group
 
 
-# yet to do
 @app.post("/groups/{group_id}/add-member")
 def add_member(
     group_id: int,
@@ -154,6 +153,26 @@ def add_member(
         raise HTTPException(status_code=401, detail="Unauthorised")
 
     return {"user added"}
+
+@app.get("/groups/{group_id}/all-members")
+def all_members(
+    group_id: int,
+    current_user: models.User = Depends(verify_grp_membership),
+    db: Session = Depends(get_db),
+):
+    #members whole row, access with .
+    members = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id).all()
+
+    all_members = []
+
+    for member in members:
+        user = db.query(models.User).filter(models.User.user_id == member.user_id).first()
+        name = user.username
+        all_members.append(name)
+
+    return all_members
+
+
 
 
 # all groups user is in — returns full objects with group_id and name
@@ -288,9 +307,13 @@ def add_rating(
     db.add(new_rating)
     db.commit()
 
-    user = db.query(models.User).filter(models.User.user_id == current_user.user_id).first()
+    user = (
+        db.query(models.User)
+        .filter(models.User.user_id == current_user.user_id)
+        .first()
+    )
 
-    return {"message": "Rating added","username":user.username}
+    return {"message": "Rating added", "username": user.username}
 
 
 @app.post("/groups/{group_id}/movies/{movie_id}/add-review")
@@ -311,9 +334,13 @@ def add_review(
     db.add(new_review)
     db.commit()
 
-    user = db.query(models.User).filter(models.User.user_id == current_user.user_id).first()
+    user = (
+        db.query(models.User)
+        .filter(models.User.user_id == current_user.user_id)
+        .first()
+    )
 
-    return {"message":"Review added successfully", "username":user.username}
+    return {"message": "Review added successfully", "username": user.username}
 
 
 @app.get("/groups/{group_id}/movies/{movie_id}/rating&review")
@@ -337,23 +364,31 @@ def rating_review(
 
     ratings_data = []
     for r in all_ratings:
-        rating_user = db.query(models.User).filter(models.User.user_id == r.user_id).first()
-        ratings_data.append({
-            "user_id": r.user_id,
-            "username": rating_user.username,
-            "rating": r.rating,
-        })
+        rating_user = (
+            db.query(models.User).filter(models.User.user_id == r.user_id).first()
+        )
+        ratings_data.append(
+            {
+                "user_id": r.user_id,
+                "username": rating_user.username,
+                "rating": r.rating,
+            }
+        )
 
     reviews_data = []
     for rev in all_reviews:
-        review_user = db.query(models.User).filter(models.User.user_id == rev.user_id).first()
-        reviews_data.append({
-            "review_id": rev.review_id,
-            "user_id": rev.user_id,
-            "username": review_user.username,
-            "content": rev.content,
-            "created_at": rev.created_at,
-        })
+        review_user = (
+            db.query(models.User).filter(models.User.user_id == rev.user_id).first()
+        )
+        reviews_data.append(
+            {
+                "review_id": rev.review_id,
+                "user_id": rev.user_id,
+                "username": review_user.username,
+                "content": rev.content,
+                "created_at": rev.created_at,
+            }
+        )
 
     return {
         "ratings": ratings_data,
